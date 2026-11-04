@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NowPlaying.Core/NowPlaying.Core.csproj" />
+    <Project Path="src/NowPlaying.Windows/NowPlaying.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NowPlaying.Tests/NowPlaying.Tests.csproj" />
+    <Project Path="tests/NowPlaying.Windows.Tests/NowPlaying.Windows.Tests.csproj" />
+  </Folder>
+</Solution>

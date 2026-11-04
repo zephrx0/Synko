@@ -1,0 +1,14 @@
+* text=auto eol=lf
+*.cs text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.ps1 text eol=crlf
+*.svg text eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary
+*.ttf binary
+src/NowPlaying.Windows/Ui/fonts/*.txt -whitespace
+src/NowPlaying.Windows/Ui/assets/*LICENSE* -whitespace

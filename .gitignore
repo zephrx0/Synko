@@ -1,0 +1,12 @@
+.tools/
+**/bin/
+**/obj/
+artifacts/
+*.user
+*.suo
+
+# Local audit history, kept outside the release repository
+docs/legacy-nowplaying-readme.md
+docs/synko-2.1-review.md
+docs/synko-phase-3-review.md
+docs/synko-redesign-audit.md

@@ -1,0 +1,4 @@
+export const logo = '<svg class="brand-logo" viewBox="0 0 48 56" aria-hidden="true"><path d="M38 7C28 10 9 16 9 22C9 27 35 27 35 33C35 39 17 45 8 49" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const browsers = { "Google Chrome": "googlechrome", "Chrome": "googlechrome", "Microsoft Edge": "edge", "Edge": "edge", "Firefox": "firefoxbrowser", "Brave": "brave", "Vivaldi": "vivaldi", "Opera": "opera", "Opera GX": "opera-gx", "Arc": "arc", "Яндекс Браузер": "yandex", "Yandex Browser": "yandex", "Chromium": "chromium", "Thorium": "thorium", "LibreWolf": "librewolf", "Waterfox": "waterfox", "Floorp": "floorp", "Zen": "zenbrowser" };
+export const browserIcon = name => browsers[name] ? "browser:" + browsers[name] : "web";
+export const sourceIcon = source => source === "apple" ? "apple_logo" : source === "youtube" ? "youtube_logo" : source === "player" ? "music_note" : "web";

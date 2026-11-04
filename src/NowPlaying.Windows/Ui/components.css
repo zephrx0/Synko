@@ -1,0 +1,40 @@
+.md-button, .icon-button, .source-chip, .segment, .switch, .text-action { position: relative; border: 0; cursor: pointer; color: var(--md-sys-color-on-surface); background: transparent; isolation: isolate; }
+.md-button, .icon-button, .source-chip, .segment, .text-action { overflow: hidden; }
+.md-button::before, .icon-button::before, .source-chip::before, .segment::before, .text-action::before { content: ""; position: absolute; inset: 0; background: var(--state-color, currentColor); opacity: var(--state-opacity, 0); border-radius: inherit; z-index: -1; pointer-events: none; }
+.md-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 8px 24px; border-radius: var(--press-radius, 999px); font-size: 14px; line-height: 20px; font-weight: 600; }
+.md-button.filled { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+.md-button.tonal { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.md-button.text, .text-action { color: var(--md-sys-color-primary); }
+.icon-button { width: 40px; height: 40px; border-radius: var(--press-radius, 999px); display: inline-flex; align-items: center; justify-content: center; padding: 8px; }
+.icon-button.quiet { color: var(--md-sys-color-on-surface-variant); }
+button:disabled { cursor: default; opacity: var(--disabled-opacity); }
+.ripple { pointer-events: none; position: absolute; border-radius: 999px; background: currentColor; opacity: .1; z-index: -1; }
+.surface-card { padding: 16px; border-radius: 28px; background: var(--md-sys-color-surface-container-high); }
+.player-card { padding: 24px; border-radius: 32px; background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); }
+.switch { width: 52px; height: 40px; flex: 0 0 52px; padding: 0; border-radius: 999px; display: grid; place-items: center; }
+.switch-track { display: block; width: 52px; height: 32px; border-radius: 999px; background: var(--md-sys-color-surface-container-highest); position: relative; }
+.switch[aria-checked="true"] .switch-track { background: var(--md-sys-color-primary); }
+.switch-thumb { display: flex; align-items: center; justify-content: center; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 999px; background: var(--md-sys-color-on-surface-variant); color: var(--md-sys-color-on-primary-container); transform: translateX(var(--thumb-x, 0px)) scale(var(--thumb-scale, .6667)); }
+.switch[aria-checked="true"] .switch-thumb { background: var(--md-sys-color-on-primary); color: var(--md-sys-color-primary); }
+.switch-thumb .symbol { font-size: 18px; width: 18px; height: 18px; opacity: var(--thumb-icon-opacity, 0); }
+.switch::after { content: ""; position: absolute; width: 40px; height: 40px; border-radius: 999px; background: var(--md-sys-color-primary); opacity: var(--state-opacity, 0); transform: translateX(calc(var(--thumb-x, 0px) - 10px)); pointer-events: none; }
+.source-chip { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; border-radius: var(--press-radius, 999px); background: var(--md-sys-color-surface-container-high); font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap; }
+.source-chip[aria-pressed="false"] { color: var(--md-sys-color-on-surface-variant); }
+.source-badge { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; height: 28px; padding: 4px 12px; border-radius: 999px; background: color-mix(in srgb, var(--md-sys-color-on-primary-container) 12%, transparent); font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap; }
+.segmented-group { display: flex; height: 40px; padding: 0; border-radius: 999px; background: var(--md-sys-color-surface-container-high); overflow: hidden; }
+.segment { display: inline-flex; align-items: center; justify-content: center; flex: 1 1 0; min-width: 0; gap: 4px; height: 40px; padding: 8px; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.segment[aria-checked="true"] { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+.text-field { position: relative; height: 56px; border-radius: 16px; background: var(--md-sys-color-surface-container-highest); overflow: visible; }
+.text-field label { position: absolute; left: 16px; top: 8px; font-size: 12px; line-height: 16px; color: var(--md-sys-color-on-surface-variant); pointer-events: none; }
+.text-field input { background: transparent; border: 0; border-radius: inherit; color: var(--md-sys-color-on-surface); width: 100%; height: 56px; padding: 24px 16px 8px; font-size: 16px; line-height: 24px; font-variant-numeric: tabular-nums; }
+.text-field:focus-within label { color: var(--md-sys-color-primary); }
+.text-field[aria-invalid="true"] label { color: var(--md-sys-color-error); }
+.text-action { display: inline-flex; align-items: center; justify-content: center; height: 40px; border-radius: 999px; padding: 8px 16px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.md-dialog { padding: 24px; width: calc(100% - 32px); max-width: 408px; border: 0; border-radius: 28px; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); }
+.md-dialog::backdrop { background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent); }
+.md-dialog p { margin: 0 0 24px; font-size: 16px; line-height: 24px; }
+.dialog-actions { display: flex; justify-content: flex-end; }
+.snackbar { position: fixed; bottom: 16px; left: 16px; right: 16px; min-height: 48px; padding: 16px; border-radius: 16px; background: var(--md-sys-color-inverse-surface); color: var(--md-sys-color-inverse-on-surface); font-size: 14px; line-height: 20px; z-index: 5; }
+.component-gallery { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.component-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+@media (forced-colors: active) { .switch-track, .source-chip, .segmented-group, .md-button { outline: 1px solid ButtonText; } .switch[aria-checked="true"] .switch-track { background: Highlight; } .switch-thumb { background: ButtonText; } }

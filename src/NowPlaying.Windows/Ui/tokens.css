@@ -1,0 +1,59 @@
+@font-face {
+  font-family: "Roboto Flex";
+  src: url("./fonts/RobotoFlex.ttf") format("truetype-variations");
+  font-style: normal;
+  font-weight: 100 1000;
+  font-stretch: 25% 151%;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Material Symbols Rounded";
+  src: url("./fonts/MaterialSymbolsRounded.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+}
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --shape-player: 32px;
+  --shape-card: 28px;
+  --shape-field: 16px;
+  --shape-full: 999px;
+  --type-headline: 28px;
+  --type-title: 22px;
+  --type-body: 16px;
+  --type-label: 14px;
+  --type-small: 12px;
+  --state-hover: 8%;
+  --state-focus: 10%;
+  --state-pressed: 10%;
+  --disabled-opacity: .38;
+}
+
+* { box-sizing: border-box; }
+html { background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); color-scheme: light; }
+html[data-dark="true"] { color-scheme: dark; }
+body { margin: 0; font: 400 16px/24px "Roboto Flex", sans-serif; font-variation-settings: "wdth" 100, "opsz" 16; user-select: none; }
+button, input { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+button, [role="switch"], [role="radio"] { touch-action: manipulation; }
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--md-sys-color-primary); outline-offset: 4px; }
+[hidden] { display: none !important; }
+.symbol { font: 400 24px/1 "Material Symbols Rounded"; font-variation-settings: "FILL" var(--icon-fill, 0), "wght" 400, "GRAD" 0, "opsz" 24; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; }
+.symbol.small { font-size: 18px; width: 18px; height: 18px; }
+.secondary-text { color: var(--md-sys-color-on-surface-variant); }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--md-sys-color-surface); }
+::-webkit-scrollbar-thumb { background: var(--md-sys-color-outline-variant); border-radius: var(--shape-full); }
+
+@media (forced-colors: active) {
+  :root { --md-sys-color-surface: Canvas !important; --md-sys-color-on-surface: CanvasText !important; --md-sys-color-on-surface-variant: CanvasText !important; --md-sys-color-primary: Highlight !important; --md-sys-color-on-primary: HighlightText !important; --md-sys-color-primary-container: Canvas !important; --md-sys-color-on-primary-container: CanvasText !important; --md-sys-color-secondary-container: ButtonFace !important; --md-sys-color-on-secondary-container: ButtonText !important; --md-sys-color-surface-container-high: ButtonFace !important; --md-sys-color-surface-container-highest: ButtonFace !important; --md-sys-color-outline: CanvasText !important; }
+}
+html[data-high-contrast="true"] { --md-sys-color-surface: Canvas !important; --md-sys-color-on-surface: CanvasText !important; --md-sys-color-on-surface-variant: CanvasText !important; --md-sys-color-primary: Highlight !important; --md-sys-color-on-primary: HighlightText !important; --md-sys-color-primary-container: Canvas !important; --md-sys-color-on-primary-container: CanvasText !important; --md-sys-color-secondary-container: ButtonFace !important; --md-sys-color-on-secondary-container: ButtonText !important; --md-sys-color-surface-container-high: ButtonFace !important; --md-sys-color-surface-container-highest: ButtonFace !important; --md-sys-color-outline: CanvasText !important; }
