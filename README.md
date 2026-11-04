@@ -108,5 +108,3 @@ Install .NET 10 SDK and run `build.ps1 -Test`. The GitHub workflow builds and up
 ### Credits
 
 .NET / WinForms, WebView2, Material Color Utilities, Roboto Flex, Material Symbols Rounded, Simple Icons and Browser Logos. [Dependency notes and licences](docs/third-party/synko-ui.md).
-
-Interface refinement uses [Unslop](https://heydamir.design/unslop) by Damir Sokolovsky ([@heydamir](https://x.com/heydamir)), CC BY 4.0. Browser marks belong to their respective owners.
