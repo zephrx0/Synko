@@ -6,12 +6,94 @@ using NowPlaying.Core;
 
 var passed = 0;
 var failed = 0;
+await Run("Spotify desktop and Store IDs are recognised without confusing a browser", () =>
+{
+    foreach (var id in new[] { "Spotify.exe", "SPOTIFY.EXE", @"C:\Users\Test\AppData\Roaming\Spotify\Spotify.exe", "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify" })
+    {
+        var source = SourceClassifier.Classify(id);
+        Equal(MediaSource.Spotify, source.Source);
+        Equal("Spotify", source.Name);
+    }
+    Equal(MediaSource.Browser, SourceClassifier.Classify(@"C:\Apps\SpotifyTools\chrome.exe").Source);
+    Equal(MediaSource.Other, SourceClassifier.Classify("NotSpotifyHelper.exe").Source);
+    Equal(MediaSource.Other, SourceClassifier.Classify("NotSpotify.exe").Source);
+    Equal(3, (int)SourceMode.AllPlayers);
+    Equal(4, (int)SourceMode.Spotify);
+    return Task.CompletedTask;
+});
+await Run("Auto and Spotify modes select playing Spotify and clear it on pause", () =>
+{
+    var spotify = Media("Spotify.exe", MediaSource.Spotify, current: false) with { SourceName = "Spotify" };
+    var apple = Media("AppleMusic.exe", MediaSource.AppleMusic) with { IsPlaying = false };
+    var browser = Media("chrome.exe", MediaSource.Browser) with { IsPlaying = false };
+    Equal(spotify, MediaSelector.Select([apple, browser, spotify], SourceMode.Automatic, null));
+    Equal(spotify, MediaSelector.Select([apple with { IsPlaying = true }, spotify], SourceMode.Spotify, null));
+    Equal<MediaSnapshot?>(null, MediaSelector.Select([spotify with { IsPlaying = false }], SourceMode.Spotify, spotify.TrackKey));
+    Check(!MediaSelector.Allows(MediaSource.Spotify, SourceMode.AppleMusic), "Apple Music mode remains independent");
+    Check(!MediaSelector.Allows(MediaSource.Spotify, SourceMode.Browser), "Spotify desktop is not a browser");
+    return Task.CompletedTask;
+});
+await Run("Spotify sends Listening Spotify, its own fallback logo and a Spotify search button", () =>
+{
+    var spotify = Media("Spotify.exe", MediaSource.Spotify) with { SourceName = "Spotify", Title = "Song & / Трек?", Artist = "Artist" };
+    var fallback = PresenceBuilder.Build(spotify, "apple-music-only");
+    Equal(2, fallback.Type);
+    Equal("Spotify", fallback.ActivityName);
+    Equal(PresenceBuilder.SpotifyImage, fallback.ImageKey);
+    var art = new ArtworkMatch("https://is1-ssl.mzstatic.com/cover.jpg", "Album", "https://music.apple.com/album/test/123");
+    var presence = PresenceBuilder.Build(spotify, "apple-music-only", art);
+    using var json = JsonDocument.Parse(JsonSerializer.Serialize(presence.ToActivity()));
+    Equal("Spotify", json.RootElement.GetProperty("name").GetString());
+    Equal(2, json.RootElement.GetProperty("type").GetInt32());
+    Equal(art.ImageUrl, json.RootElement.GetProperty("assets").GetProperty("large_image").GetString());
+    Equal<string?>(null, presence.AppleMusicUrl);
+    var button = json.RootElement.GetProperty("buttons")[0];
+    Equal("Найти в Spotify", button.GetProperty("label").GetString());
+    var url = new Uri(button.GetProperty("url").GetString()!);
+    Equal("open.spotify.com", url.Host);
+    Equal("/search/Artist Song & / Трек?", Uri.UnescapeDataString(url.AbsolutePath));
+    return Task.CompletedTask;
+});
+await Run("Spotify shares verified album artwork cache with Apple Music without searching browser metadata", async () =>
+{
+    var requests = 0;
+    using var handler = new FakeHttpHandler(_ =>
+    {
+        requests++;
+        return new(System.Net.HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(new { results = new[] { Catalog("Song", "Artist", "Album") } })) };
+    });
+    using var http = new HttpClient(handler);
+    var resolver = new AppleArtworkResolver(http, requestInterval: TimeSpan.Zero);
+    var spotify = Media("Spotify.exe", MediaSource.Spotify) with { SourceName = "Spotify" };
+    var cover = await resolver.ResolveAsync(spotify, default);
+    Check(cover.Match is not null, "Spotify needs a public artwork URL for Discord");
+    var apple = await resolver.ResolveAsync(spotify with { Source = MediaSource.AppleMusic, AppId = "AppleMusic.exe" }, default);
+    Equal(cover.Match, apple.Match);
+    Equal(1, requests);
+    await resolver.ResolveAsync(spotify with { Source = MediaSource.Browser }, default);
+    Equal(1, requests);
+});
+await Run("Switching from Spotify cancels the previous artwork and disabling removes it", async () =>
+{
+    var resolver = new DelayedArtworkResolver();
+    await using var coordinator = new ArtworkCoordinator(resolver);
+    var spotify = Media("Spotify.exe", MediaSource.Spotify);
+    var apple = Media("AppleMusic.exe", MediaSource.AppleMusic) with { Title = "Another song" };
+    coordinator.Update(spotify, true);
+    coordinator.Update(apple, true);
+    resolver.Complete(spotify, "spotify-old");
+    Check(coordinator.Update(apple, true)?.Match is null, "Late Spotify artwork must not replace Apple Music");
+    resolver.Complete(apple, "apple-new");
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+    while (coordinator.Update(apple, true)?.Match is null) { timeout.Token.ThrowIfCancellationRequested(); await Task.Yield(); }
+    Equal<ArtworkResult?>(null, coordinator.Update(spotify, false));
+});
 await Run("Apple Music and browser identification", () =>
 {
     Equal(MediaSource.AppleMusic, SourceClassifier.Classify("AppleInc.AppleMusicWin_nzyj5cx40ttqa!App").Source);
     Equal(MediaSource.Browser, SourceClassifier.Classify("Chrome.exe").Source);
     Equal(MediaSource.Browser, SourceClassifier.Classify("Microsoft.MSEdge.Stable_8wekyb3d8bbwe!App").Source);
-    Equal(MediaSource.Other, SourceClassifier.Classify("Spotify.exe").Source);
+    Equal(MediaSource.Spotify, SourceClassifier.Classify("Spotify.exe").Source);
     return Task.CompletedTask;
 });
 await Run("Selection skips paused sources and respects filters", () =>
@@ -77,10 +159,15 @@ await Run("Discord handshake, PING/PONG, activity ACK and clear", async () =>
     {
         await Handshake(server, token);
         await RpcFrame.WriteAsync(server, 3, Encoding.UTF8.GetBytes("heartbeat"), token);
-        var pong = await RpcFrame.ReadAsync(server, token);
+        var first = await RpcFrame.ReadAsync(server, token);
+        var second = await RpcFrame.ReadAsync(server, token);
+        // READY allows the caller to publish while the reader answers PING.
+        // Both frame orders are valid; neither operation may be lost.
+        var pong = first.Opcode == 4 ? first : second;
+        var set = first.Opcode == 1 ? first : second;
         Equal(4, pong.Opcode);
         Equal("heartbeat", Encoding.UTF8.GetString(pong.Payload));
-        var set = await RpcFrame.ReadAsync(server, token);
+        Equal(1, set.Opcode);
         using var message = JsonDocument.Parse(set.Payload);
         Equal("SET_ACTIVITY", message.RootElement.GetProperty("cmd").GetString());
         Equal("Song", message.RootElement.GetProperty("args").GetProperty("activity").GetProperty("details").GetString());

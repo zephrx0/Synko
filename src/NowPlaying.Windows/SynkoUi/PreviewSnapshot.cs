@@ -15,24 +15,24 @@ internal static class PreviewSnapshot
         var settings = SettingsStore.Load();
         var sessions = await new MediaMonitor().ReadAsync(cancellationToken, waitForBrowserAddress: true, readYouTubeAddress: settings.YouTubeThumbnails);
         var media = MediaSelector.Select(sessions, settings.SourceMode, null)
-            ?? sessions.FirstOrDefault(s => s.Source is MediaSource.AppleMusic or MediaSource.Browser && !string.IsNullOrWhiteSpace(s.Title));
+            ?? sessions.FirstOrDefault(s => MediaSelector.Allows(s.Source, settings.SourceMode) && !string.IsNullOrWhiteSpace(s.Title));
         using var http = new HttpClient();
         string? imageUrl = null;
-        if (media?.Source == MediaSource.AppleMusic && settings.AutomaticArtwork)
+        if (media?.Source is MediaSource.AppleMusic or MediaSource.Spotify && settings.AutomaticArtwork)
             imageUrl = (await new AppleArtworkResolver(http, cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json"))
                 .ResolveAsync(media, cancellationToken)).Match?.ImageUrl;
         else if (media?.Website == MediaWebsite.YouTube && settings.YouTubeThumbnails)
             imageUrl = YouTubeVideo.ThumbnailUrl(media.VideoId);
-        var showArtwork = media?.Source == MediaSource.AppleMusic ? settings.AutomaticArtwork : settings.YouTubeThumbnails;
+        var showArtwork = media?.Source is MediaSource.AppleMusic or MediaSource.Spotify ? settings.AutomaticArtwork : settings.YouTubeThumbnails;
         var cover = showArtwork ? media?.ThumbnailData ?? (imageUrl is null ? null : await new CoverImageLoader(http,
             Path.Combine(SettingsStore.Folder, "artwork", "images")).LoadAsync(imageUrl, cancellationToken)) : null;
-        var sources = sessions.Where(s => s.Source is MediaSource.AppleMusic or MediaSource.Browser)
-            .GroupBy(s => s.Source == MediaSource.AppleMusic ? "apple" : s.SourceName)
-            .Select(group => new UiSource(group.Key == "apple" ? "apple" : "browser:" + group.Key, group.Key == "apple" ? "Apple Music" : ShortBrowserName(group.First().SourceName), group.Any(s => s.IsPlaying), group.Key == "apple" ? null : group.Key))
+        var sources = sessions.Where(s => s.Source is MediaSource.AppleMusic or MediaSource.Browser or MediaSource.Spotify)
+            .GroupBy(s => s.Source == MediaSource.AppleMusic ? "apple" : s.Source == MediaSource.Spotify ? "spotify" : "browser:" + s.SourceName)
+            .Select(group => new UiSource(group.Key, ShortBrowserName(group.First().SourceName), group.Any(s => s.IsPlaying), group.First().Source == MediaSource.Browser ? group.First().SourceName : null))
             .ToArray();
         UiMedia? selected = media is null ? null : new(media.TrackKey, media.Title, media.Artist, media.Album,
-            media.Source == MediaSource.AppleMusic ? "apple" : media.Website == MediaWebsite.YouTube ? "youtube" : "browser",
-            media.Source == MediaSource.AppleMusic ? "Apple Music" : media.Website == MediaWebsite.YouTube ? "YouTube" : "Браузер",
+            media.Source == MediaSource.AppleMusic ? "apple" : media.Source == MediaSource.Spotify ? "spotify" : media.Website == MediaWebsite.YouTube ? "youtube" : "browser",
+            media.Source == MediaSource.AppleMusic ? "Apple Music" : media.Source == MediaSource.Spotify ? "Spotify" : media.Website == MediaWebsite.YouTube ? "YouTube" : "Браузер",
             media.IsPlaying, media.Position.TotalSeconds, media.Duration.TotalSeconds, media.PlaybackRate,
             media.ObservedAt.ToUnixTimeMilliseconds(), cover, media.Source == MediaSource.Browser ? media.SourceName : null);
         return new(settings.Enabled, selected, sources);

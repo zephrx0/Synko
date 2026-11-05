@@ -46,14 +46,14 @@ internal static class Program
             var sessions = await new MediaMonitor(probeAddress).ReadAsync(timeout.Token, waitForBrowserAddress: true, readYouTubeAddress: settings.YouTubeThumbnails);
             var mediaMilliseconds = elapsed.Elapsed.TotalMilliseconds;
             NowPlaying.Core.ArtworkResult? artwork = null;
-            if (includeArtwork && NowPlaying.Core.MediaSelector.Select(sessions, NowPlaying.Core.SourceMode.AppleMusic, null) is { } media)
+            var selected = NowPlaying.Core.MediaSelector.Select(sessions, settings.SourceMode, null);
+            if (includeArtwork && selected?.Source is NowPlaying.Core.MediaSource.AppleMusic or NowPlaying.Core.MediaSource.Spotify)
             {
                 using var http = new HttpClient();
                 artwork = await new NowPlaying.Core.AppleArtworkResolver(http,
-                    cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")).ResolveAsync(media, timeout.Token);
+                    cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")).ResolveAsync(selected, timeout.Token);
             }
             var catalogMilliseconds = elapsed.Elapsed.TotalMilliseconds - mediaMilliseconds;
-            var selected = NowPlaying.Core.MediaSelector.Select(sessions, settings.SourceMode, null);
             string? downloadedCover = null;
             if (includeArtwork && artwork?.Match is { } match)
             {
@@ -62,7 +62,7 @@ internal static class Program
                     .LoadAsync(match.ImageUrl, timeout.Token);
             }
             var activity = selected is null ? null : NowPlaying.Core.PresenceBuilder.Build(selected, settings.ImageKey,
-                selected.Source == NowPlaying.Core.MediaSource.AppleMusic ? artwork?.Match : null).ToActivity();
+                selected.Source is NowPlaying.Core.MediaSource.AppleMusic or NowPlaying.Core.MediaSource.Spotify ? artwork?.Match : null).ToActivity();
             var automatic = NowPlaying.Core.MediaSelector.Select(sessions, NowPlaying.Core.SourceMode.Automatic, null);
             await File.WriteAllTextAsync(path, JsonSerializer.Serialize(new { success = true, sessions, artwork, activity,
                 sourceMode = settings.SourceMode, automaticTitle = automatic?.Title, browser = BrowserAddressReader.LastDiagnostic,

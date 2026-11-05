@@ -58,7 +58,7 @@ export function symbol(name, small = false) {
     image.src = "./assets/" + browser + (["yandex", "waterfox"].includes(browser) ? ".png" : ".svg"); image.alt = "";
     icon.append(image); return icon;
   }
-  const brand = { apple_logo: "applemusic", discord_logo: "discord", youtube_logo: "youtube" }[name];
+  const brand = { apple_logo: "applemusic", spotify_logo: "spotify", discord_logo: "discord", youtube_logo: "youtube" }[name];
   if (brand) {
     icon.className = "brand-glyph " + brand + (small ? " small" : "");
     icon.setAttribute("aria-hidden", "true");

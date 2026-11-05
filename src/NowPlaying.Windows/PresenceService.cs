@@ -135,6 +135,7 @@ internal sealed class PresenceService : IAsyncDisposable
             || old.ImageKey != next.ImageKey || old.ImageText != next.ImageText
             || old.AppleMusicUrl != next.AppleMusicUrl
             || old.YouTubeUrl != next.YouTubeUrl
+            || old.SpotifyUrl != next.SpotifyUrl
             || old.Start.HasValue != next.Start.HasValue || old.End.HasValue != next.End.HasValue
             || Math.Abs((old.Start ?? 0) - (next.Start ?? 0)) > 3
             || Math.Abs((old.End ?? 0) - (next.End ?? 0)) > 3;

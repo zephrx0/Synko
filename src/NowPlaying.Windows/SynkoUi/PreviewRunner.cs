@@ -62,6 +62,8 @@ internal static class PreviewRunner
                         reports.Add(new { theme, scale, checks = report });
                         var statuses = await CheckSourceStatusesAsync(form, snapshot, outputFolder, slug);
                         reports.Add(new { theme, scale, statuses });
+                        var spotify = await CheckSpotifyAsync(form, snapshot, outputFolder, slug);
+                        reports.Add(new { theme, scale, spotify });
                         form.Send(new { type = "state", state = snapshot with { Preferences = LiveSnapshot.Preferences(SettingsStore.Load() with { OnboardingDone = true, ThemeMode = "system", OnboardingStep = 0 }) } });
                         await CaptureAdditionalAsync(form, outputFolder, slug);
                     }
@@ -150,6 +152,43 @@ internal static class PreviewRunner
 
     private static async Task<int> ReadFramesAsync(SynkoWindow form)
         => int.Parse(await form.Web.ExecuteScriptAsync("window.synko.diagnostics().wave.frames"), System.Globalization.CultureInfo.InvariantCulture);
+
+    private static async Task<JsonElement> CheckSpotifyAsync(SynkoWindow form, UiSnapshot snapshot, string folder, string slug)
+    {
+        var preferences = LiveSnapshot.Preferences(SettingsStore.Load() with { SourceMode = Core.SourceMode.Spotify, OnboardingDone = true });
+        var fixture = snapshot with
+        {
+            Media = new UiMedia("spotify-ui-test", "Проверка Spotify", "Тестовая медиасессия", "", "spotify", "Spotify", true,
+                42, 180, 1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), null),
+            Sources = [new("spotify", "Spotify", true), new("apple", "Apple Music", false)],
+            Preferences = preferences
+        };
+        form.Send(new { type = "state", state = fixture });
+        await WaitAsync(form, "window.synko.diagnostics().state.media?.source === 'spotify' && document.querySelector('.source-badge .spotify') !== null");
+        await Task.Delay(300);
+        await using (var output = File.Create(Path.Combine(folder, slug + "-spotify.png")))
+            await form.Web.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, output);
+        var result = await EvaluateAsync(form, """
+            (()=>{
+              const state=window.synko.diagnostics().state;
+              const spotify=document.querySelector('.source-status .spotify');
+              const source=spotify?.parentElement;
+              const icon=getComputedStyle(document.querySelector('.source-badge .spotify')).maskImage;
+              return JSON.stringify({spotifyName:state.media.sourceLabel==='Spotify'&&document.querySelector('.source-badge').textContent==='Spotify',
+                spotifyIcons:!!spotify&&!!document.querySelector('.cover .spotify')&&icon.includes('spotify.svg'),
+                correctMode:state.preferences.sourceMode===4,
+                quietStatus:source?.tagName==='DIV'&&source.querySelector('.source-name').textContent==='Spotify'&&source.dataset.playing==='true',
+                noOverflow:document.documentElement.scrollWidth===innerWidth});
+            })()
+            """);
+        RequireAll(result);
+        await form.Web.ExecuteScriptAsync("window.synko.showView('settings')");
+        var fits = await form.Web.ExecuteScriptAsync("(()=>{const buttons=[...document.querySelectorAll('.settings-section .segment[data-value]')].filter(b=>['0','1','2','4'].includes(b.dataset.value));return buttons.length===4&&buttons.every(button=>{button.click();return buttons.every(b=>b.scrollWidth<=b.clientWidth&&b.scrollHeight<=b.clientHeight)})})()");
+        if (fits != "true") throw new InvalidOperationException("Music source choices wrap or overflow in settings.");
+        await form.Web.ExecuteScriptAsync("window.synko.showView('main')");
+        form.Send(new { type = "state", state = snapshot with { Preferences = LiveSnapshot.Preferences(SettingsStore.Load() with { OnboardingDone = true }) } });
+        return result;
+    }
 
     private static async Task<JsonElement> CheckSourceStatusesAsync(SynkoWindow form, UiSnapshot snapshot, string folder, string slug)
     {

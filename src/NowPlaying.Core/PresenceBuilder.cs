@@ -3,7 +3,7 @@ using System.Text;
 namespace NowPlaying.Core;
 
 public sealed record Presence(string Details, string State, int Type, long? Start, long? End, string? ImageKey, string ImageText, string? AppleMusicUrl = null,
-    string? ActivityName = null, string? YouTubeUrl = null)
+    string? ActivityName = null, string? YouTubeUrl = null, string? SpotifyUrl = null)
 {
     public object ToActivity()
     {
@@ -25,6 +25,8 @@ public sealed record Presence(string Details, string State, int Type, long? Star
             activity["assets"] = new { large_image = ImageKey, large_text = ImageText };
         if (!string.IsNullOrWhiteSpace(YouTubeUrl))
             activity["buttons"] = new[] { new { label = "Открыть на YouTube", url = YouTubeUrl } };
+        else if (!string.IsNullOrWhiteSpace(SpotifyUrl))
+            activity["buttons"] = new[] { new { label = "Найти в Spotify", url = SpotifyUrl } };
         else if (!string.IsNullOrWhiteSpace(AppleMusicUrl))
             activity["buttons"] = new[] { new { label = "Открыть в Apple Music", url = AppleMusicUrl } };
         return activity;
@@ -33,6 +35,7 @@ public sealed record Presence(string Details, string State, int Type, long? Star
 
 public static class PresenceBuilder
 {
+    public const string SpotifyImage = "https://raw.githubusercontent.com/zephrx0/Synko/main/docs/images/spotify.png";
     public static Presence Build(MediaSnapshot media, string? imageKey, ArtworkMatch? artwork = null)
     {
         long? start = null;
@@ -52,6 +55,7 @@ public static class PresenceBuilder
         var name = media.Source switch
         {
             MediaSource.AppleMusic => "Apple Music",
+            MediaSource.Spotify => "Spotify",
             MediaSource.Browser when media.Website == MediaWebsite.YouTube => "видео на YouTube",
             MediaSource.Browser => "видео в браузере",
             _ => media.SourceName
@@ -59,9 +63,11 @@ public static class PresenceBuilder
         var youtubeImage = media.Source == MediaSource.Browser && media.Website == MediaWebsite.YouTube
             ? YouTubeVideo.ThumbnailUrl(media.VideoId) : null;
         return new(Clip(media.Title), Clip(state), media.Source == MediaSource.Browser ? 3 : 2,
-            start, end, youtubeImage ?? artwork?.ImageUrl ?? (string.IsNullOrWhiteSpace(imageKey) ? null : imageKey.Trim()),
+            start, end, youtubeImage ?? artwork?.ImageUrl ?? (media.Source == MediaSource.Spotify ? SpotifyImage : string.IsNullOrWhiteSpace(imageKey) ? null : imageKey.Trim()),
             Clip(youtubeImage is not null ? media.Title : artwork is null ? media.SourceName : artwork.Album),
-            artwork?.AppleMusicUrl, Clip(name), youtubeImage is not null ? YouTubeVideo.WatchUrl(media.VideoId) : null);
+            media.Source == MediaSource.AppleMusic ? artwork?.AppleMusicUrl : null, Clip(name),
+            youtubeImage is not null ? YouTubeVideo.WatchUrl(media.VideoId) : null,
+            media.Source == MediaSource.Spotify ? "https://open.spotify.com/search/" + Uri.EscapeDataString(Clip(media.Artist) + " " + Clip(media.Title)) : null);
     }
 
     // Discord caps details/state at 128 UTF-8 bytes. Iterate Unicode scalars so

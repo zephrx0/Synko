@@ -1,5 +1,6 @@
 using System.Drawing.Imaging;
 using System.Text.Json;
+using NowPlaying.Core;
 using Microsoft.Web.WebView2.Core;
 
 namespace NowPlaying.Windows.SynkoUi;
@@ -39,6 +40,11 @@ internal static class SmokeRunner
                 await window.Web.ExecuteScriptAsync("document.querySelector('button[aria-label=\"Настройки\"]').click()");
                 await WaitAsync(window, "window.synko.diagnostics().view === 'settings' && document.querySelector('.settings-section input') !== null");
                 await CaptureAsync(window, folder, "production-settings");
+                await window.Web.ExecuteScriptAsync("document.querySelector('.segment[data-value=\"4\"]').click()");
+                await WaitAsync(window, "window.synko.diagnostics().state.preferences.sourceMode === 4");
+                Require(SettingsStore.Load().SourceMode == SourceMode.Spotify, "Spotify source did not persist");
+                await window.Web.ExecuteScriptAsync("document.querySelector('.segment[data-value=\"0\"]').click()");
+                await WaitAsync(window, "window.synko.diagnostics().state.preferences.sourceMode === 0");
                 await window.Web.ExecuteScriptAsync("[...document.querySelectorAll('button')].find(b=>b.textContent==='Вставить').click()");
                 await WaitAsync(window, "document.querySelector('input').value === '123'");
                 await window.Web.ExecuteScriptAsync("[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Developer Portal')).click()");
@@ -48,7 +54,7 @@ internal static class SmokeRunner
                 Require(StartupRegistration.IsEnabled(), "Startup did not save to the isolated registry key");
                 await window.Web.ExecuteScriptAsync("(()=>{const rows=[...document.querySelectorAll('.settings-row')];rows.find(r=>r.textContent.includes('Запускать вместе')).querySelector('button').click()})()");
                 await WaitAsync(window, "window.synko.diagnostics().state.preferences.startup === false");
-                foreach (var option in new[] { ("Обложки Apple Music", "automaticArtwork"), ("Превью YouTube", "youTubeThumbnails"), ("Проверять при запуске", "autoCheckUpdates") })
+                foreach (var option in new[] { ("Обложки музыки", "automaticArtwork"), ("Превью YouTube", "youTubeThumbnails"), ("Проверять при запуске", "autoCheckUpdates") })
                 {
                     var text = JsonSerializer.Serialize(option.Item1);
                     await window.Web.ExecuteScriptAsync("(()=>{const row=[...document.querySelectorAll('.settings-row')].find(r=>r.querySelector('.row-label').textContent===" + text + ");row.querySelector('[role=switch]').click()})()");
@@ -101,7 +107,7 @@ internal static class SmokeRunner
                 {
                     success = true, executable = Environment.ProcessPath, version = Application.ProductVersion,
                     newShell = true, noLegacyWindow = true, homeButtons = 2, settingsNavigateInPlace = true,
-                    themeSaved = true, artworkKeySaved = true, invalidIdPreservesSettings = true,
+                    themeSaved = true, artworkKeySaved = true, invalidIdPreservesSettings = true, spotifySourceSaved = true,
                     onboardingOpensInPlace = true, allFiveWizardSteps = true, sourceSaved = true, wizardCompletionSaved = true,
                     hideAndReopen = true, userSettingsUntouched = true,
                     publicationDisabledDuringCheck = true, browserIcons = 15, noLongDashes = true, pasteBridge = true,

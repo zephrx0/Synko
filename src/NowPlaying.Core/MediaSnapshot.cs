@@ -1,7 +1,7 @@
 namespace NowPlaying.Core;
 
-public enum MediaSource { Other, AppleMusic, Browser }
-public enum SourceMode { Automatic, AppleMusic, Browser, AllPlayers }
+public enum MediaSource { Other, AppleMusic, Browser, Spotify }
+public enum SourceMode { Automatic, AppleMusic, Browser, AllPlayers, Spotify }
 public enum MediaWebsite { Unknown, YouTube }
 
 public sealed record MediaSnapshot(
@@ -35,6 +35,10 @@ public static class SourceClassifier
 {
     public static (MediaSource Source, string Name) Classify(string appId)
     {
+        if (appId.Equals("Spotify", StringComparison.OrdinalIgnoreCase)
+            || appId.Replace('\\', '/').Split('/')[^1].Equals("Spotify.exe", StringComparison.OrdinalIgnoreCase)
+            || appId.StartsWith("SpotifyAB.SpotifyMusic_", StringComparison.OrdinalIgnoreCase))
+            return (MediaSource.Spotify, "Spotify");
         if (appId.Contains("applemusic", StringComparison.OrdinalIgnoreCase)
             || appId.Contains("itunes", StringComparison.OrdinalIgnoreCase))
             return (MediaSource.AppleMusic, "Apple Music");
@@ -61,8 +65,9 @@ public static class MediaSelector
     {
         SourceMode.AppleMusic => source == MediaSource.AppleMusic,
         SourceMode.Browser => source == MediaSource.Browser,
+        SourceMode.Spotify => source == MediaSource.Spotify,
         SourceMode.AllPlayers => true,
-        _ => source is MediaSource.AppleMusic or MediaSource.Browser
+        _ => source is MediaSource.AppleMusic or MediaSource.Browser or MediaSource.Spotify
     };
     public static MediaSnapshot? Select(IReadOnlyList<MediaSnapshot> sessions, SourceMode mode, string? previousTrack)
     {

@@ -28,8 +28,8 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
     public async Task<ArtworkResult> ResolveAsync(MediaSnapshot raw, CancellationToken cancellationToken)
     {
         var media = MediaMetadata.Normalize(raw);
-        if (media.Source != MediaSource.AppleMusic)
-            return new(null, "Автообложки доступны для Apple Music", _time.GetUtcNow().AddMinutes(15));
+        if (media.Source is not (MediaSource.AppleMusic or MediaSource.Spotify))
+            return new(null, "Автообложки доступны для Apple Music и Spotify", _time.GetUtcNow().AddMinutes(15));
         var key = $"{Normalize(media.Title)}\n{Normalize(media.Artist)}\n{Normalize(media.Album)}";
         await _gate.WaitAsync(cancellationToken);
         try
@@ -72,7 +72,7 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
 
     private async Task<ArtworkResult> FindAsync(MediaSnapshot media, CancellationToken cancellationToken)
     {
-        if (media.Source != MediaSource.AppleMusic || string.IsNullOrWhiteSpace(media.Title) || string.IsNullOrWhiteSpace(media.Artist))
+        if (media.Source is not (MediaSource.AppleMusic or MediaSource.Spotify) || string.IsNullOrWhiteSpace(media.Title) || string.IsNullOrWhiteSpace(media.Artist))
             return new(null, "Обложка: нет данных для поиска", _time.GetUtcNow().AddMinutes(15));
 
         // Album search also works when a particular song is absent from the
@@ -141,6 +141,7 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
 
     private void SaveCache()
     {
+        while (_cache.Count > 256) _cache.Remove(_cache.MinBy(item => item.Value.ExpiresAt).Key);
         if (cacheFile is null) return;
         try
         {

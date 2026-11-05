@@ -11,7 +11,7 @@ public sealed class ArtworkCoordinator(IArtworkResolver resolver, TimeProvider? 
 
     public ArtworkResult? Update(MediaSnapshot? media, bool enabled)
     {
-        var key = enabled && media?.Source == MediaSource.AppleMusic ? media.TrackKey : null;
+        var key = enabled && media?.Source is MediaSource.AppleMusic or MediaSource.Spotify ? media.TrackKey : null;
         if (key != _track || (_lookup?.IsCompletedSuccessfully == true && _lookup.Result.ExpiresAt <= _time.GetUtcNow()))
         {
             _lookupCancellation?.Cancel();

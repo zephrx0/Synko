@@ -46,7 +46,7 @@ export class OnboardingView {
     }
     if (this.step === 2) {
       heading("Откуда брать музыку"); const choices = document.createElement("div"); choices.className = "source-choices";
-      for (const [value, name, source] of [[0, "Авто", "auto"], [1, "Apple Music", "apple"], [2, "Браузер", "browser"]]) {
+      for (const [value, name, source] of [[0, "Авто", "auto"], [1, "Apple Music", "apple"], [4, "Spotify", "spotify"], [2, "Браузер", "browser"]]) {
         const item = document.createElement("button"); item.className = "source-choice"; item.type = "button"; item.dataset.mode = String(value);
         const text = document.createElement("span"); const label = document.createElement("span"); label.className = "choice-label"; label.textContent = name;
         const status = document.createElement("span"); status.className = "choice-status"; status.dataset.source = source; text.append(label, status);
@@ -57,7 +57,7 @@ export class OnboardingView {
     }
     if (this.step === 3) {
       heading("Внешний вид"); this.appearance = new AppearanceControls(content, p, (key, value) => this.change(key, value));
-      this.apple = switchRow(content, "Обложки Apple Music", p.automaticArtwork ?? true, value => this.change("automaticArtwork", value));
+      this.apple = switchRow(content, "Обложки музыки", p.automaticArtwork ?? true, value => this.change("automaticArtwork", value));
       this.youtube = switchRow(content, "Превью YouTube", p.youTubeThumbnails ?? true, value => this.change("youTubeThumbnails", value));
       this.startup = switchRow(content, "Запускать вместе с Windows", p.startup || false, enabled => this.command({ type: "startup", enabled }));
     }

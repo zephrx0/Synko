@@ -7,6 +7,7 @@
 .cover { width: 128px; height: 128px; flex: 0 0 128px; border-radius: 28px; overflow: hidden; display: grid; place-items: center; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 .cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .cover > .symbol { width: 40px; height: 40px; font-size: 40px; }
+.cover > .brand-glyph { width: 48px; height: 48px; flex-basis: 48px; }
 .media-copy { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: stretch; }
 .source-badge { background: transparent; padding: 0; height: 24px; gap: 8px; font-weight: 500; }
 .media-title { overflow: hidden; margin: 8px 0 4px; height: 28px; font-size: 22px; line-height: 28px; font-weight: 600; white-space: nowrap; }
@@ -21,6 +22,7 @@
 .publication-label { flex: 1 1 0; min-width: 0; font-size: 16px; line-height: 24px; font-weight: 500; }
 .brand-glyph { width: 24px; height: 24px; flex: 0 0 24px; display: inline-block; background: currentColor; mask: var(--brand-mask) center / contain no-repeat; -webkit-mask: var(--brand-mask) center / contain no-repeat; }
 .brand-glyph.applemusic { --brand-mask: url('./assets/applemusic.svg'); }
+.brand-glyph.spotify { --brand-mask: url('./assets/spotify.svg'); }
 .brand-glyph.discord { --brand-mask: url('./assets/discord.svg'); }
 .brand-glyph.youtube { --brand-mask: url('./assets/youtube.svg'); }
 .brand-glyph.small { width: 18px; height: 18px; flex-basis: 18px; }

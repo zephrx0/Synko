@@ -38,6 +38,7 @@ internal static class Program
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             FeatureChecks.Run(Path.GetDirectoryName(path)!);
             ArtworkChecks.RunAsync(Path.GetDirectoryName(path)!).GetAwaiter().GetResult();
+            SpotifyChecks.Run();
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

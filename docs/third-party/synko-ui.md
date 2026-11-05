@@ -8,7 +8,9 @@
 Шрифты, иконки и код Material Color Utilities загружаются локально. Node.js, npm, UI-фреймворки и внешние CDN для интерфейса не нужны.
 # Дополнения Synko 2.1
 
-Локальные SVG Apple Music, Discord и YouTube: [Simple Icons](https://github.com/simple-icons/simple-icons), CC0; исходные файлы и лицензия включены в `Ui/assets`. Использование товарных знаков не означает принадлежность приложения к Apple, Discord или YouTube.
+Локальные SVG Apple Music, Spotify, Discord и YouTube: [Simple Icons](https://github.com/simple-icons/simple-icons), CC0; исходные файлы и лицензия включены в `Ui/assets`. Использование товарных знаков не означает принадлежность приложения к владельцам этих марок.
+
+Резервная PNG-иконка Spotify взята из [официального веб-плеера](https://open.spotifycdn.com/cdn/images/favicon32.b64ecc03.png), хранится в `docs/images/spotify.png` и используется как публичная резервная картинка Discord, когда обложка трека не найдена.
 
 ## Synko 2.2
 

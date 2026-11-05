@@ -36,7 +36,7 @@ internal sealed class LiveSnapshot : IDisposable
             : MediaSelector.Select(state.Sessions, settings.SourceMode, _previous?.Key)
                 ?? state.Sessions.FirstOrDefault(s => !s.IsPlaying && MediaSelector.Allows(s.Source, settings.SourceMode) && s.TrackKey == _previous?.Key && !string.IsNullOrWhiteSpace(s.Title));
         var url = selected?.TrackKey == state.Selected?.TrackKey ? state.ArtworkUrl : selected?.TrackKey == _previous?.Key ? _url : null;
-        var showArtwork = selected?.Source switch { MediaSource.AppleMusic => settings.AutomaticArtwork, MediaSource.Browser => settings.YouTubeThumbnails, _ => true };
+        var showArtwork = selected?.Source switch { MediaSource.AppleMusic or MediaSource.Spotify => settings.AutomaticArtwork, MediaSource.Browser => settings.YouTubeThumbnails, _ => true };
         if (!showArtwork) url = null;
         if (selected is null) url = null;
         if (url != _url)
@@ -68,12 +68,12 @@ internal sealed class LiveSnapshot : IDisposable
             _ = ObserveAsync(_loading);
         }
         _previous = selected is null ? null : new(selected.TrackKey, selected.Title, selected.Artist, selected.Album,
-            selected.Source == MediaSource.AppleMusic ? "apple" : selected.Source == MediaSource.Other ? "player" : selected.Website == MediaWebsite.YouTube ? "youtube" : "browser",
-            selected.Source == MediaSource.AppleMusic ? "Apple Music" : selected.Source == MediaSource.Other ? selected.SourceName : selected.Website == MediaWebsite.YouTube ? "YouTube" : "Браузер",
+            selected.Source == MediaSource.AppleMusic ? "apple" : selected.Source == MediaSource.Spotify ? "spotify" : selected.Source == MediaSource.Other ? "player" : selected.Website == MediaWebsite.YouTube ? "youtube" : "browser",
+            selected.Source == MediaSource.AppleMusic ? "Apple Music" : selected.Source == MediaSource.Spotify ? "Spotify" : selected.Source == MediaSource.Other ? selected.SourceName : selected.Website == MediaWebsite.YouTube ? "YouTube" : "Браузер",
             selected.IsPlaying, selected.Position.TotalSeconds, selected.Duration.TotalSeconds, selected.PlaybackRate,
             selected.ObservedAt.ToUnixTimeMilliseconds(), _cover ?? (showArtwork ? selected.ThumbnailData : null), selected.Source == MediaSource.Browser ? selected.SourceName : null);
-        var sources = state.Sessions.Where(s => s.Source is MediaSource.AppleMusic or MediaSource.Browser || settings.SourceMode == SourceMode.AllPlayers)
-            .GroupBy(s => s.Source == MediaSource.AppleMusic ? "apple" : (s.Source == MediaSource.Other ? "player:" : "browser:") + s.SourceName)
+        var sources = state.Sessions.Where(s => s.Source is MediaSource.AppleMusic or MediaSource.Browser or MediaSource.Spotify || settings.SourceMode == SourceMode.AllPlayers)
+            .GroupBy(s => s.Source == MediaSource.AppleMusic ? "apple" : s.Source == MediaSource.Spotify ? "spotify" : (s.Source == MediaSource.Other ? "player:" : "browser:") + s.SourceName)
             .Select(g => new UiSource(g.Key, g.First().SourceName switch
             { "Google Chrome" => "Chrome", "Microsoft Edge" => "Edge", var name => name }, g.Any(s => s.IsPlaying), g.First().Source == MediaSource.Browser ? g.First().SourceName : null)).ToArray();
         return new(settings.Enabled, _previous, sources, Preferences(settings));

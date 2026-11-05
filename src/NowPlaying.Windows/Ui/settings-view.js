@@ -88,11 +88,12 @@ export class SettingsView {
     discord.append(button("Developer Portal", { icon: "open_in_new", action: () => command({ type: "portal" }) }));
     this.publication = switchRow(discord, "Показывать в Discord", state?.enabled ?? true, enabled => command({ type: "publication", enabled }));
     const sources = section(root, "Источник", "headphones");
-    this.source = segmentedGroup("Источник", [{ value: "0", label: "Авто" }, { value: "1", label: "Apple Music" }, { value: "2", label: "Браузер" }], String(p.sourceMode || 0), value => this.change("sourceMode", Number(value)));
+    this.source = segmentedGroup("Источник", [{ value: "0", label: "Авто" }, { value: "1", label: "Apple Music" }, { value: "4", label: "Spotify" }, { value: "2", label: "Браузер" }], String(p.sourceMode || 0), value => this.change("sourceMode", Number(value)));
+    this.source.classList.add("music-source-group");
     sources.append(this.source);
     this.allPlayers = switchRow(sources, "Все медиаплееры Windows", p.sourceMode === 3, enabled => this.change("sourceMode", enabled ? 3 : 0));
     const covers = section(root, "Обложки", "album");
-    this.apple = switchRow(covers, "Обложки Apple Music", p.automaticArtwork ?? true, value => this.change("automaticArtwork", value), "Название трека, исполнитель и альбом отправляются в каталог Apple, чтобы найти обложку");
+    this.apple = switchRow(covers, "Обложки музыки", p.automaticArtwork ?? true, value => this.change("automaticArtwork", value), "Для Apple Music и Spotify картинка берётся из медиапанели Windows. Чтобы найти публичную обложку для Discord, название трека, исполнитель и альбом отправляются в каталог Apple");
     this.youtube = switchRow(covers, "Превью YouTube", p.youTubeThumbnails ?? true, value => this.change("youTubeThumbnails", value), "Ссылка на ролик берётся из адресной строки YouTube и передаётся в Discord как превью. История браузера не читается");
     const appearance = section(root, "Внешний вид", "palette"); this.appearance = new AppearanceControls(appearance, p, (key, value) => this.change(key, value));
     const system = section(root, "Система", "desktop_windows");

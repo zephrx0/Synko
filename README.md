@@ -4,7 +4,7 @@
 
 [Русский](#русский) / [English](#english) / [Releases](https://github.com/zephrx0/Synko/releases)
 
-Музыка Apple Music и видео из браузера в профиле Discord. Нативная фоновая служба Windows, локальный интерфейс, светлая и тёмная темы.
+Музыка Apple Music и Spotify, видео из браузера в профиле Discord. Нативная фоновая служба Windows, локальный интерфейс, светлая и тёмная темы.
 
 <img src="docs/images/synko-2.3-d753d6cc.png" width="488" alt="Synko: Apple Music, обложка трека и публикация в Discord">
 
@@ -12,10 +12,11 @@
 
 ### Возможности
 
-- Apple Music и браузеры через медиасессии Windows, без токена Discord
-- Режим «Авто», отдельный выбор Apple Music или браузера, поддержка всех медиаплееров Windows
+- Apple Music, настольный Spotify и браузеры через медиасессии Windows, без токена Discord
+- Режим «Авто», отдельный выбор Apple Music, Spotify или браузера, поддержка всех медиаплееров Windows
+- Статус «Слушает Spotify» с названием трека, исполнителем, временем и кнопкой поиска в Spotify
 - Распознавание YouTube, превью текущего видео, кнопка перехода к ролику в Discord
-- Обложки Apple Music из каталога Apple и картинки из системной медиапанели
+- Обложки музыки из каталога Apple и картинки из системной медиапанели
 - Снятие активности на паузе, при остановке и выключении публикации
 - Иконки Chrome, Edge, Firefox, Brave, Opera / GX, Vivaldi, Arc, Яндекс, Chromium, Thorium, LibreWolf, Waterfox, Floorp и Zen
 - Тема Windows или ручной выбор, цвет из обложки, системного акцента или образца
@@ -23,6 +24,8 @@
 - Работа в трее, автозапуск и встроенное обновление из GitHub Releases
 
 ### Установка
+
+Spotify поддерживается через его настольный клиент Windows, включая версию Microsoft Store. Авторизация Spotify и дополнительные ключи не требуются. Обложка в приложении берётся из медиапанели Windows; публичная обложка для Discord ищется в каталоге Apple по названию, исполнителю и альбому. Это регулируется настройкой «Обложки музыки».
 
 Windows 10/11 x64. Нужен Microsoft Edge WebView2 Runtime. Отдельно устанавливать .NET для автономной сборки не требуется.
 
@@ -72,13 +75,14 @@ Start-Process .\artifacts\Synko-win-x64\Synko.exe -ArgumentList '--preview-ui', 
 
 ## English
 
-Synko shows Apple Music and browser playback in your Discord profile using Windows media sessions and local Discord RPC.
+Synko shows Apple Music, Spotify and browser playback in your Discord profile using Windows media sessions and local Discord RPC.
 
 ### Features
 
-- Automatic source selection, Apple Music, browser-only and all-player modes
+- Automatic source selection, Apple Music, Spotify, browser-only and all-player modes
+- Listening to Spotify with track details, timeline and a Spotify search button
 - YouTube detection, video thumbnails and a link to the current video
-- Apple Music artwork and native Windows media thumbnails
+- Music artwork from the Apple catalogue and native Windows media thumbnails
 - Activity cleared on pause or when sharing is disabled
 - Icons for 15 recognised browser identities
 - System, light and dark themes, artwork colours and custom accents
@@ -86,6 +90,8 @@ Synko shows Apple Music and browser playback in your Discord profile using Windo
 - Startup registration and verified updates from GitHub Releases
 
 ### Setup
+
+Spotify support uses its Windows desktop client, including the Microsoft Store version. No Spotify sign-in or developer keys are needed. In-app artwork comes from Windows media sessions; public Discord artwork is matched in the Apple catalogue by title, artist and album. The Music artwork setting controls this lookup.
 
 Windows 10/11 x64 and Microsoft Edge WebView2 Runtime are required. The portable build includes .NET.
 

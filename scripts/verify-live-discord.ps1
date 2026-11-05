@@ -56,7 +56,9 @@ try {
     if ($ack.nonce -ne $nonce) { throw 'Unexpected Discord RPC acknowledgment.' }
     if ($ack.data.name -ne $activity.name -or $ack.data.type -ne $activity.type) { throw 'Discord did not apply the requested activity name and type.' }
     $image = [string]$activity.assets.large_image
-    $publicArtwork = $image -like 'https://i.ytimg.com/*' -or $image -match '^https://[^/]+\.mzstatic\.com/'
+    $publicArtwork = $image -like 'https://i.ytimg.com/*' -or $image -match '^https://[^/]+\.mzstatic\.com/' `
+        -or $image -like 'https://open.spotifycdn.com/cdn/images/*' `
+        -or $image -eq 'https://raw.githubusercontent.com/zephrx0/Synko/main/docs/images/spotify.png'
     if ($publicArtwork) {
         $expected = [Uri]$activity.assets.large_image
         $actual = [string]$ack.data.assets.large_image
@@ -68,7 +70,7 @@ try {
     Write-Frame 1 ([Text.Encoding]::UTF8.GetBytes($clearPayload))
     $clearAck = Read-Message
     if ($clearAck.nonce -ne $clearNonce) { throw 'Discord did not acknowledge activity removal.' }
-    $result = @{ success = $true; acknowledged = $true; requestedName = $activity.name; requestedType = $activity.type; artworkVerified = $publicArtwork; artworkAcknowledgedMilliseconds = $artworkTimer.Elapsed.TotalMilliseconds; thumbnailVerified = ($image -like 'https://i.ytimg.com/*'); clearAcknowledged = $true }
+    $result = @{ success = $true; acknowledged = $true; simulated = ($diagnostic.simulated -eq $true); requestedName = $activity.name; requestedType = $activity.type; artworkVerified = $publicArtwork; artworkAcknowledgedMilliseconds = $artworkTimer.Elapsed.TotalMilliseconds; thumbnailVerified = ($image -like 'https://i.ytimg.com/*'); clearAcknowledged = $true }
     $result | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $Output -Encoding UTF8
     Write-Output 'Discord confirmed activity, thumbnail when available, and activity removal.'
 }

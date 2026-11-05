@@ -55,8 +55,9 @@ export class MainView {
     const media = state.media;
     const empty = !media;
     this.root.querySelector(".player-card").classList.toggle("empty", empty);
-    const blockedByFilter = empty && state.preferences?.sourceMode > 0 && state.preferences.sourceMode < 3 && state.sources?.some(source => source.playing);
-    this.title.setText(media?.title || (blockedByFilter ? (state.preferences.sourceMode === 1 ? "Выбран Apple Music" : "Выбран браузер") : "Ничего не играет"));
+    const filterLabels = { 1: "Выбран Apple Music", 2: "Выбран браузер", 4: "Выбран Spotify" };
+    const blockedByFilter = empty && filterLabels[state.preferences?.sourceMode] && state.sources?.some(source => source.playing);
+    this.title.setText(media?.title || (blockedByFilter ? filterLabels[state.preferences.sourceMode] : "Ничего не играет"));
     this.root.querySelector(".player-card").classList.toggle("filtered", !!blockedByFilter);
     this.artistLine.setText(media?.artist || "");
     this.albumLine.setText(media?.album || "");
@@ -67,7 +68,7 @@ export class MainView {
       this.image = picture;
       this.cover.replaceChildren();
       if (picture) { const image = document.createElement("img"); image.src = picture; image.alt = media?.album || media?.title || ""; this.cover.append(image); }
-      else this.cover.append(symbol("music_note"));
+      else this.cover.append(symbol(media?.source === "spotify" ? "spotify_logo" : "music_note"));
     }
     this.wave.setMedia(media);
     this.setTime(this.wave.currentPosition(), media?.duration || 0);
@@ -85,7 +86,7 @@ export class MainView {
         const caption = document.createElement("span"), status = document.createElement("span");
         caption.className = "source-name";
         status.className = "source-playback";
-        element.append(symbol(source.id === "apple" ? iconFor("apple") : source.id.startsWith("player:") ? "music_note" : browserIcon(source.browser || source.name), true), caption, status);
+        element.append(symbol(source.id === "apple" || source.id === "spotify" ? iconFor(source.id) : source.id.startsWith("player:") ? "music_note" : browserIcon(source.browser || source.name), true), caption, status);
         element.setState = (name, active) => {
           caption.textContent = name;
           status.textContent = active ? "играет" : "пауза";
