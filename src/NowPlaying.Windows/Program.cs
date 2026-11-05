@@ -14,13 +14,15 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         if (args.Length == 2 && args[0] == "--preview-ui") return SynkoUi.PreviewRunner.Run(Path.GetFullPath(args[1]));
         if (args.Length == 2 && args[0] == "--smoke-ui") return SynkoUi.SmokeRunner.Run(Path.GetFullPath(args[1]));
+        var settings = SettingsStore.Load();
+        var background = IsBackgroundLaunch(args, settings);
         var suffix = WindowsIdentity.GetCurrent().User?.Value ?? Environment.UserName;
         // Synko ships as a separate app beside legacy Now Playing installs. Give
         // it a distinct activation channel so starting Synko cannot reveal the
         // legacy settings form instead of the new Synko window.
         using var instance = new Mutex(true, @"Local\Synko.Instance." + suffix, out var firstInstance);
         using var showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\Synko.Show." + suffix);
-        if (!firstInstance) { showEvent.Set(); return 0; }
+        if (!firstInstance) { if (!background) showEvent.Set(); return 0; }
         try
         {
             try { StartupRegistration.Migrate(); }
@@ -29,12 +31,15 @@ internal static class Program
                 Directory.CreateDirectory(SettingsStore.Folder);
                 File.AppendAllText(Path.Combine(SettingsStore.Folder, "synko-error.log"), ex.Message + Environment.NewLine);
             }
-            using var context = new TrayApplication(SettingsStore.Load(), showEvent, args.Contains("--background"));
+            using var context = new TrayApplication(settings, showEvent, background);
             Application.Run(context);
             return 0;
         }
         finally { instance.ReleaseMutex(); }
     }
+
+    internal static bool IsBackgroundLaunch(string[] args, AppSettings settings) =>
+        args.Contains("--background") || (args.Contains("--startup") && settings.QuietStartup);
 
     private static async Task<int> DiagnoseAsync(string path, bool includeArtwork, bool probeAddress = false)
     {

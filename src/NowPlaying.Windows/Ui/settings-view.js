@@ -98,6 +98,7 @@ export class SettingsView {
     const appearance = section(root, "Внешний вид", "palette"); this.appearance = new AppearanceControls(appearance, p, (key, value) => this.change(key, value));
     const system = section(root, "Система", "desktop_windows");
     this.startup = switchRow(system, "Запускать вместе с Windows", p.startup || false, enabled => command({ type: "startup", enabled }));
+    this.quietStartup = switchRow(system, "Тихий запуск", p.quietStartup ?? true, value => this.change("quietStartup", value), "При входе в Windows открывать только в трее");
     const updates = section(root, "Обновления", "system_update");
     this.autoUpdates = switchRow(updates, "Проверять при запуске", p.autoCheckUpdates ?? true, enabled => this.change("autoCheckUpdates", enabled));
     this.updateMessage = document.createElement("p"); this.updateMessage.className = "update-message"; this.updateMessage.setAttribute("aria-live", "polite");
@@ -117,6 +118,7 @@ export class SettingsView {
     this.publication.setValue(state.enabled, true); this.source.setValue(String(p.sourceMode || 0));
     this.allPlayers.setValue(p.sourceMode === 3, true); this.apple.setValue(p.automaticArtwork ?? true, true);
     this.youtube.setValue(p.youTubeThumbnails ?? true, true); this.startup.setValue(p.startup || false, true); this.appearance.update(p);
+    this.quietStartup.setValue(p.quietStartup ?? true, true);
     this.autoUpdates.setValue(p.autoCheckUpdates ?? true, true); this.setUpdate(state.update);
   }
   setUpdate(update) {

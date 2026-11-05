@@ -60,6 +60,7 @@ export class OnboardingView {
       this.apple = switchRow(content, "Обложки музыки", p.automaticArtwork ?? true, value => this.change("automaticArtwork", value));
       this.youtube = switchRow(content, "Превью YouTube", p.youTubeThumbnails ?? true, value => this.change("youTubeThumbnails", value));
       this.startup = switchRow(content, "Запускать вместе с Windows", p.startup || false, enabled => this.command({ type: "startup", enabled }));
+      this.quietStartup = switchRow(content, "Тихий запуск", p.quietStartup ?? true, value => this.change("quietStartup", value), "При входе в Windows открывать только в трее");
     }
     if (this.step === 4) {
       heading("Всё готово");
@@ -92,6 +93,7 @@ export class OnboardingView {
     }
     if (this.step === 3) {
       this.appearance.update(p); this.apple.setValue(p.automaticArtwork ?? true, true); this.youtube.setValue(p.youTubeThumbnails ?? true, true); this.startup.setValue(p.startup || false, true);
+      this.quietStartup.setValue(p.quietStartup ?? true, true);
     }
     this.updateNext();
   }

@@ -18,6 +18,7 @@ internal sealed record AppSettings
     public bool OnboardingDone { get; init; }
     public int OnboardingStep { get; init; }
     public bool AutoCheckUpdates { get; init; } = true;
+    public bool QuietStartup { get; init; } = true;
 }
 
 internal static class SettingsStore
@@ -70,7 +71,7 @@ internal static class StartupRegistration
     public static void SetEnabled(bool enabled)
     {
         using var key = Registry.CurrentUser.CreateSubKey(RegistryPath);
-        if (enabled) key.SetValue(ValueName, $"\"{Environment.ProcessPath}\" --background");
+        if (enabled) key.SetValue(ValueName, $"\"{Environment.ProcessPath}\" --startup");
         else key.DeleteValue(ValueName, throwOnMissingValue: false);
         key.DeleteValue("NowPlaying", throwOnMissingValue: false);
         key.DeleteValue("Now Playing", throwOnMissingValue: false);
@@ -78,7 +79,6 @@ internal static class StartupRegistration
 
     public static void Migrate()
     {
-        using var key = Registry.CurrentUser.OpenSubKey(RegistryPath);
-        if (key?.GetValue("NowPlaying") is string || key?.GetValue("Now Playing") is string) SetEnabled(true);
+        if (IsEnabled()) SetEnabled(true);
     }
 }

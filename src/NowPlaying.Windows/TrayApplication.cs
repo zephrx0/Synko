@@ -74,7 +74,7 @@ internal sealed class TrayApplication : ApplicationContext
             (_, _) => { if (!_exiting) _window.BeginInvoke(ShowWindow); }, null, Timeout.Infinite, false);
         _service.Start();
         PushState();
-        if (!background || !settings.OnboardingDone) ShowWindow();
+        if (!background) ShowWindow();
         _updateTimer.Tick += async (_, _) => { _updateTimer.Stop(); if (!_exiting) await _updates.CheckAsync(); };
         if (settings.AutoCheckUpdates && SettingsStore.OverrideFolder is null) _updateTimer.Start();
     }
@@ -109,6 +109,7 @@ internal sealed class TrayApplication : ApplicationContext
                         "onboardingStep" => s with { OnboardingStep = Math.Clamp(value.GetInt32(), 0, 4) },
                         "onboardingDone" => s with { OnboardingDone = value.GetBoolean(), OnboardingStep = 0 },
                         "autoCheckUpdates" => s with { AutoCheckUpdates = value.GetBoolean() },
+                        "quietStartup" => s with { QuietStartup = value.GetBoolean() },
                         _ => s
                     });
                     break;

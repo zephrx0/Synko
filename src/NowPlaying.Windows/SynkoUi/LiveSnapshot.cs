@@ -4,7 +4,7 @@ namespace NowPlaying.Windows.SynkoUi;
 
 internal sealed record UiPreferences(string ApplicationId, int SourceMode, bool AutomaticArtwork, bool YouTubeThumbnails,
     string ImageKey, bool Startup, string ThemeMode, string ColorSource, string? CustomSeed,
-    bool OnboardingDone, int OnboardingStep, string Version, bool AutoCheckUpdates);
+    bool OnboardingDone, int OnboardingStep, string Version, bool AutoCheckUpdates, bool QuietStartup);
 
 internal sealed class LiveSnapshot : IDisposable
 {
@@ -82,7 +82,7 @@ internal sealed class LiveSnapshot : IDisposable
     public static UiPreferences Preferences(AppSettings settings) => new(settings.ApplicationId, (int)settings.SourceMode,
         settings.AutomaticArtwork, settings.YouTubeThumbnails, settings.ImageKey, StartupRegistration.IsEnabled(),
         settings.ThemeMode, settings.ColorSource, settings.CustomSeed, settings.OnboardingDone, settings.OnboardingStep,
-        Application.ProductVersion.Split('+')[0], settings.AutoCheckUpdates);
+        Application.ProductVersion.Split('+')[0], settings.AutoCheckUpdates, settings.QuietStartup);
 
     private async Task ObserveAsync(Task<string?> loading)
     {
