@@ -29,6 +29,7 @@ internal static class SmokeRunner
                 await window.Ready.WaitAsync(TimeSpan.FromSeconds(30));
                 await WaitAsync(window, "window.synko.diagnostics().state?.preferences?.onboardingDone === true");
                 await Task.Delay(4000);
+                Require(await Script(window, "[...document.querySelectorAll('.cover img')].every(image=>image.complete && image.naturalWidth>0)"), "Artwork bytes did not decode in WebView");
                 await CaptureAsync(window, folder, "production-home");
                 Require(Application.OpenForms.Cast<Form>().All(f => f is SynkoWindow), "Unexpected window was created");
                 Require(await Script(window, "document.querySelectorAll('button').length === 2"), "Home has extra buttons");

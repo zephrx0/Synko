@@ -78,21 +78,12 @@ internal sealed class MediaMonitor(bool probeAddress = false)
                         using var reader = new DataReader(stream);
                         await reader.LoadAsync((uint)stream.Size).AsTask(imageTimeout.Token);
                         var bytes = new byte[stream.Size]; reader.ReadBytes(bytes);
-                        var type = stream.ContentType;
-                        if (!type.StartsWith("image/", StringComparison.Ordinal))
+                        picture = NativeArtwork.ToDataUrl(bytes);
+                        if (picture is not null)
                         {
-                            // Some players expose image bytes as a generic
-                            // stream. Windows can still decode them locally.
-                            using var input = new MemoryStream(bytes);
-                            using var image = Image.FromStream(input);
-                            using var output = new MemoryStream();
-                            image.Save(output, System.Drawing.Imaging.ImageFormat.Png);
-                            bytes = output.ToArray();
-                            type = "image/png";
+                            if (_thumbnails.Count >= 32) _thumbnails.Clear();
+                            _thumbnails.TryAdd(media.TrackKey, picture);
                         }
-                        picture = "data:" + type + ";base64," + Convert.ToBase64String(bytes);
-                        if (_thumbnails.Count >= 32) _thumbnails.Clear();
-                        _thumbnails.TryAdd(media.TrackKey, picture);
                     }
                 }
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is IOException or System.Runtime.InteropServices.COMException or OperationCanceledException or ArgumentException) { }

@@ -39,9 +39,10 @@ internal static class PreviewRunner
                         if (form != primary) { primary.Hide(); form.Show(); await form.Ready.WaitAsync(TimeSpan.FromSeconds(25)); }
                         form.TopMost = true;
                         form.Activate();
+                        form.Send(new { type = "visibility", visible = true });
                         form.Send(new { type = "state", state = snapshot });
                         await WaitAsync(form, "window.synko.diagnostics().state !== null && [...document.querySelectorAll('.app-shell > *')].every(e=>getComputedStyle(e).opacity==='1')");
-                        await WaitAsync(form, "!document.querySelector('.cover img') || document.querySelector('.cover img').complete");
+                        await WaitAsync(form, "!document.querySelector('.cover img') || (document.querySelector('.cover img').complete && document.querySelector('.cover img').naturalWidth > 0)");
                         await Task.Delay(700);
                         var slug = theme + "-" + (int)(scale * 100);
                         await using (var output = File.Create(Path.Combine(outputFolder, slug + ".png")))
@@ -69,7 +70,7 @@ internal static class PreviewRunner
             {
                 exitCode = 1;
                 var detail = ex.ToString();
-                try { detail += "\n" + await primary.Web.ExecuteScriptAsync("JSON.stringify({url:location.href,ready:document.readyState,html:document.documentElement.outerHTML,resources:performance.getEntriesByType('resource').map(r=>({name:r.name,status:r.responseStatus}))})"); }
+                try { detail += "\n" + await primary.Web.ExecuteScriptAsync("JSON.stringify({url:location.href,ready:document.readyState,hidden:document.hidden,focused:document.hasFocus(),animationCount:window.synko?.diagnostics().animationCount,coverDecoded:document.querySelector('.cover img')?.naturalWidth,opacity:[...document.querySelectorAll('.app-shell > *')].map(e=>getComputedStyle(e).opacity)})"); }
                 catch (Exception browserError) { detail += "\n" + browserError.Message; }
                 await File.WriteAllTextAsync(Path.Combine(outputFolder, "error.txt"), detail);
             }

@@ -8,6 +8,13 @@ internal static class ArtworkChecks
 {
     public static async Task RunAsync(string folder)
     {
+        var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6t8AAAAASUVORK5CYII=");
+        var dataUrl = NativeArtwork.ToDataUrl(png);
+        Check(dataUrl?.StartsWith("data:image/png;base64,", StringComparison.Ordinal) == true, "Native MIME must come from image bytes, never a comma-separated Apple Music MIME list");
+        using (var input = new MemoryStream(Convert.FromBase64String(dataUrl!.Split(',')[1])))
+        using (var image = Image.FromStream(input)) Check(image.Width == 1, "Native data URL must decode to an actual image");
+        Check(NativeArtwork.ToDataUrl([0xff, 0xd8, 0xff, 0xe0])?.StartsWith("data:image/jpeg;base64,", StringComparison.Ordinal) == true, "JPEG MIME must be canonical");
+        Check(NativeArtwork.ToDataUrl([0, 1, 2, 3]) is null, "Unknown native data must allow remote fallback");
         var cache = Path.Combine(folder, "cover-recovery-" + Guid.NewGuid().ToString("N"));
         const string url = "https://is1-ssl.mzstatic.com/test.jpg";
         const string native = "data:image/png;base64,iVBORw0KGgo=";
@@ -57,7 +64,7 @@ internal static class ArtworkChecks
             Check(live.Create(next, settings).Media?.Cover == native, "Late previous cover must never replace the new track");
             Check(live.Create(next, settings with { AutomaticArtwork = false }).Media?.Cover is null, "Disabling artwork must remove local and downloaded images");
         }
-        Console.WriteLine("PASS cover retry after network failure, persistent image cache, immediate Windows thumbnail and track-switch cancellation");
+        Console.WriteLine("PASS native MIME canonicalization, cover retry, persistent image cache, immediate Windows thumbnail and track-switch cancellation");
     }
 
     private static HttpResponseMessage Picture()
