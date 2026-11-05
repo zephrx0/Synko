@@ -19,7 +19,7 @@ internal sealed class PresenceService : IAsyncDisposable
     public PresenceService(AppSettings settings)
     {
         _settings = settings;
-        _artwork = new(new AppleArtworkResolver(_http));
+        _artwork = new(new AppleArtworkResolver(_http, cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")));
     }
     public void Configure(AppSettings settings) => Volatile.Write(ref _settings, settings);
     public void Start() => _loop ??= Task.Run(RunAsync);
@@ -49,6 +49,15 @@ internal sealed class PresenceService : IAsyncDisposable
                 var artwork = _artwork.Update(selected, settings.AutomaticArtwork);
                 var desired = settings.Enabled && selected is not null && mediaError is null
                     ? PresenceBuilder.Build(selected, settings.ImageKey, artwork?.Match) : null;
+                var artworkStatus = selected?.Website == MediaWebsite.YouTube && settings.YouTubeThumbnails
+                    ? selected.VideoId is not null ? "Превью текущего видео YouTube" : "Для превью откройте вкладку с воспроизводимым видео YouTube"
+                    : artwork?.Status;
+                var artworkUrl = selected?.Website == MediaWebsite.YouTube && settings.YouTubeThumbnails
+                    ? YouTubeVideo.ThumbnailUrl(selected.VideoId) : artwork?.Match?.ImageUrl;
+                // Media/UI must not wait for Discord's connection or RPC ACK.
+                Updated?.Invoke(new(sessions, selected, status, mediaError, hasPublished && _discord.IsConnected, artworkStatus, artworkUrl));
+                var previousStatus = status;
+                var previouslyPublished = hasPublished && _discord.IsConnected;
                 try
                 {
                     if (activeId != settings.ApplicationId)
@@ -98,13 +107,9 @@ internal sealed class PresenceService : IAsyncDisposable
                     await _discord.DisconnectAsync();
                     nextConnect = DateTimeOffset.UtcNow.AddSeconds(8);
                 }
-                var artworkStatus = selected?.Website == MediaWebsite.YouTube && settings.YouTubeThumbnails
-                    ? selected.VideoId is not null ? "Превью текущего видео YouTube" : "Для превью откройте вкладку с воспроизводимым видео YouTube"
-                    : artwork?.Status;
-                var artworkUrl = selected?.Website == MediaWebsite.YouTube && settings.YouTubeThumbnails
-                    ? YouTubeVideo.ThumbnailUrl(selected.VideoId) : artwork?.Match?.ImageUrl;
-                Updated?.Invoke(new(sessions, selected, status, mediaError, hasPublished && _discord.IsConnected, artworkStatus, artworkUrl));
-                await Task.Delay(TimeSpan.FromSeconds(2), _stop.Token);
+                if (status != previousStatus || previouslyPublished != (hasPublished && _discord.IsConnected))
+                    Updated?.Invoke(new(sessions, selected, status, mediaError, hasPublished && _discord.IsConnected, artworkStatus, artworkUrl));
+                await Task.Delay(TimeSpan.FromMilliseconds(750), _stop.Token);
             }
         }
         catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }

@@ -40,21 +40,33 @@ internal static class Program
     {
         try
         {
+            var elapsed = System.Diagnostics.Stopwatch.StartNew();
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(includeArtwork ? 45 : 10));
             var settings = SettingsStore.Load();
             var sessions = await new MediaMonitor(probeAddress).ReadAsync(timeout.Token, waitForBrowserAddress: true, readYouTubeAddress: settings.YouTubeThumbnails);
+            var mediaMilliseconds = elapsed.Elapsed.TotalMilliseconds;
             NowPlaying.Core.ArtworkResult? artwork = null;
             if (includeArtwork && NowPlaying.Core.MediaSelector.Select(sessions, NowPlaying.Core.SourceMode.AppleMusic, null) is { } media)
             {
                 using var http = new HttpClient();
-                artwork = await new NowPlaying.Core.AppleArtworkResolver(http).ResolveAsync(media, timeout.Token);
+                artwork = await new NowPlaying.Core.AppleArtworkResolver(http,
+                    cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")).ResolveAsync(media, timeout.Token);
             }
+            var catalogMilliseconds = elapsed.Elapsed.TotalMilliseconds - mediaMilliseconds;
             var selected = NowPlaying.Core.MediaSelector.Select(sessions, settings.SourceMode, null);
+            string? downloadedCover = null;
+            if (includeArtwork && artwork?.Match is { } match)
+            {
+                using var http = new HttpClient();
+                downloadedCover = await new SynkoUi.CoverImageLoader(http, Path.Combine(SettingsStore.Folder, "artwork", "images"))
+                    .LoadAsync(match.ImageUrl, timeout.Token);
+            }
             var activity = selected is null ? null : NowPlaying.Core.PresenceBuilder.Build(selected, settings.ImageKey,
                 selected.Source == NowPlaying.Core.MediaSource.AppleMusic ? artwork?.Match : null).ToActivity();
             var automatic = NowPlaying.Core.MediaSelector.Select(sessions, NowPlaying.Core.SourceMode.Automatic, null);
             await File.WriteAllTextAsync(path, JsonSerializer.Serialize(new { success = true, sessions, artwork, activity,
                 sourceMode = settings.SourceMode, automaticTitle = automatic?.Title, browser = BrowserAddressReader.LastDiagnostic,
+                timing = new { mediaMilliseconds, catalogMilliseconds, totalMilliseconds = elapsed.Elapsed.TotalMilliseconds, downloadedCover = downloadedCover is not null },
                 thumbnails = sessions.Select(s => new { s.SourceName, available = s.ThumbnailData is not null }) }, new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }

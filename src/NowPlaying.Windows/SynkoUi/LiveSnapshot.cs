@@ -8,12 +8,27 @@ internal sealed record UiPreferences(string ApplicationId, int SourceMode, bool 
 
 internal sealed class LiveSnapshot : IDisposable
 {
-    private readonly HttpClient _http = new();
+    private readonly HttpClient _http;
+    private readonly bool _ownsHttp;
+    private readonly CoverImageLoader _images;
+    private readonly TimeProvider _time;
     private readonly CancellationTokenSource _stop = new();
+    private CancellationTokenSource? _imageCancellation;
     private string? _url;
     private string? _cover;
     private Task<string?>? _loading;
     private UiMedia? _previous;
+    private DateTimeOffset _retryAfter;
+    private int _failures;
+    public event Action? Changed;
+
+    internal LiveSnapshot(HttpClient? http = null, TimeProvider? timeProvider = null, string? cacheDirectory = null)
+    {
+        _http = http ?? new HttpClient();
+        _ownsHttp = http is null;
+        _time = timeProvider ?? TimeProvider.System;
+        _images = new(_http, cacheDirectory ?? Path.Combine(SettingsStore.Folder, "artwork", "images"));
+    }
 
     public UiSnapshot Create(ServiceState state, AppSettings settings)
     {
@@ -28,10 +43,30 @@ internal sealed class LiveSnapshot : IDisposable
         {
             _url = url;
             _cover = null;
-            _loading = url is null ? null : PreviewSnapshot.LoadCoverAsync(_http, url, _stop.Token);
+            _imageCancellation?.Cancel();
+            _imageCancellation?.Dispose();
+            _imageCancellation = null;
+            _loading = null;
+            _failures = 0;
+            _retryAfter = DateTimeOffset.MinValue;
         }
-        if (_loading?.IsCompletedSuccessfully == true) _cover = _loading.Result;
-        if (_loading?.IsFaulted == true) _ = _loading.Exception;
+        if (_loading?.IsCompleted == true)
+        {
+            if (_loading.IsCompletedSuccessfully) _cover = _loading.Result;
+            if (_loading.IsFaulted) _ = _loading.Exception;
+            if (_cover is null) _retryAfter = _time.GetUtcNow().AddSeconds(Math.Min(30, 2 << Math.Min(_failures++, 4)));
+            _loading = null;
+        }
+        // Native SMTC bytes are ready before catalogue/network work finishes.
+        // Only download when those bytes are unavailable, and retry failed
+        // downloads even when the URL/track has not changed.
+        if (url is not null && _cover is null && selected?.ThumbnailData is null && _loading is null && _time.GetUtcNow() >= _retryAfter)
+        {
+            _imageCancellation?.Dispose();
+            _imageCancellation = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
+            _loading = _images.LoadAsync(url, _imageCancellation.Token);
+            _ = ObserveAsync(_loading);
+        }
         _previous = selected is null ? null : new(selected.TrackKey, selected.Title, selected.Artist, selected.Album,
             selected.Source == MediaSource.AppleMusic ? "apple" : selected.Source == MediaSource.Other ? "player" : selected.Website == MediaWebsite.YouTube ? "youtube" : "browser",
             selected.Source == MediaSource.AppleMusic ? "Apple Music" : selected.Source == MediaSource.Other ? selected.SourceName : selected.Website == MediaWebsite.YouTube ? "YouTube" : "Браузер",
@@ -49,5 +84,19 @@ internal sealed class LiveSnapshot : IDisposable
         settings.ThemeMode, settings.ColorSource, settings.CustomSeed, settings.OnboardingDone, settings.OnboardingStep,
         Application.ProductVersion.Split('+')[0], settings.AutoCheckUpdates);
 
-    public void Dispose() { _stop.Cancel(); _http.Dispose(); _stop.Dispose(); }
+    private async Task ObserveAsync(Task<string?> loading)
+    {
+        try { await loading.ConfigureAwait(false); }
+        catch (Exception ex) when (ex is OperationCanceledException or IOException or HttpRequestException) { }
+        if (!_stop.IsCancellationRequested && ReferenceEquals(_loading, loading)) Changed?.Invoke();
+    }
+
+    public void Dispose()
+    {
+        _stop.Cancel();
+        _imageCancellation?.Cancel();
+        _imageCancellation?.Dispose();
+        if (_ownsHttp) _http.Dispose();
+        _stop.Dispose();
+    }
 }

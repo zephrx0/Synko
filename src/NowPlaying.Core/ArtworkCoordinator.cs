@@ -36,7 +36,7 @@ public sealed class ArtworkCoordinator(IArtworkResolver resolver, TimeProvider? 
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         { return new(null, "Поиск обложки отменён", _time.GetUtcNow()); }
         catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException or ArgumentException)
-        { return new(null, "Не удалось найти обложку; повторю поиск", _time.GetUtcNow().AddMinutes(2)); }
+        { return new(null, "Не удалось найти обложку; повторю поиск", _time.GetUtcNow().AddSeconds(10)); }
     }
 
     public async ValueTask DisposeAsync()

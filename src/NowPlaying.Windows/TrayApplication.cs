@@ -30,6 +30,11 @@ internal sealed class TrayApplication : ApplicationContext
         _openUrl = openUrl ?? (url => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }));
         _window = new();
         _ = _window.Handle;
+        _snapshots.Changed += () =>
+        {
+            if (!_exiting && !_window.IsDisposed)
+                _window.BeginInvoke(() => { if (!_exiting) PushState(); });
+        };
         MainForm = _window;
         _window.CommandReceived += OnUiCommand;
         _updates.Changed += () =>

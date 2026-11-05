@@ -19,10 +19,13 @@ internal static class PreviewSnapshot
         using var http = new HttpClient();
         string? imageUrl = null;
         if (media?.Source == MediaSource.AppleMusic && settings.AutomaticArtwork)
-            imageUrl = (await new AppleArtworkResolver(http).ResolveAsync(media, cancellationToken)).Match?.ImageUrl;
+            imageUrl = (await new AppleArtworkResolver(http, cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json"))
+                .ResolveAsync(media, cancellationToken)).Match?.ImageUrl;
         else if (media?.Website == MediaWebsite.YouTube && settings.YouTubeThumbnails)
             imageUrl = YouTubeVideo.ThumbnailUrl(media.VideoId);
-        var cover = await LoadCoverAsync(http, imageUrl, cancellationToken) ?? media?.ThumbnailData;
+        var showArtwork = media?.Source == MediaSource.AppleMusic ? settings.AutomaticArtwork : settings.YouTubeThumbnails;
+        var cover = showArtwork ? media?.ThumbnailData ?? (imageUrl is null ? null : await new CoverImageLoader(http,
+            Path.Combine(SettingsStore.Folder, "artwork", "images")).LoadAsync(imageUrl, cancellationToken)) : null;
         var sources = sessions.Where(s => s.Source is MediaSource.AppleMusic or MediaSource.Browser)
             .GroupBy(s => s.Source == MediaSource.AppleMusic ? "apple" : s.SourceName)
             .Select(group => new UiSource(group.Key == "apple" ? "apple" : "browser:" + group.Key, group.Key == "apple" ? "Apple Music" : ShortBrowserName(group.First().SourceName), group.Any(s => s.IsPlaying), group.Key == "apple" ? null : group.Key))
@@ -40,12 +43,12 @@ internal static class PreviewSnapshot
 
     internal static async Task<string?> LoadCoverAsync(HttpClient http, string? value, CancellationToken cancellationToken)
     {
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != "https"
-            || !(uri.Host == "i.ytimg.com" || uri.Host.EndsWith(".mzstatic.com", StringComparison.OrdinalIgnoreCase))) return null;
+        if (!IsCoverUrl(value)) return null;
+        var uri = new Uri(value!);
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(8));
+            timeout.CancelAfter(TimeSpan.FromSeconds(3));
             using var response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (response.StatusCode != HttpStatusCode.OK || response.Content.Headers.ContentType?.MediaType is not { } type || !type.StartsWith("image/", StringComparison.Ordinal)) return null;
             await response.Content.LoadIntoBufferAsync(2 * 1024 * 1024, timeout.Token);
@@ -54,4 +57,7 @@ internal static class PreviewSnapshot
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is HttpRequestException or IOException or OperationCanceledException) { return null; }
     }
+
+    internal static bool IsCoverUrl(string? value) => Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == "https"
+        && (uri.Host == "i.ytimg.com" || uri.Host.EndsWith(".mzstatic.com", StringComparison.OrdinalIgnoreCase));
 }

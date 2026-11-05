@@ -37,6 +37,7 @@ internal static class Program
             var path = args.Length > 0 ? Path.GetFullPath(args[0]) : Path.GetFullPath("artifacts/ui-preview.png");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             FeatureChecks.Run(Path.GetDirectoryName(path)!);
+            ArtworkChecks.RunAsync(Path.GetDirectoryName(path)!).GetAwaiter().GetResult();
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

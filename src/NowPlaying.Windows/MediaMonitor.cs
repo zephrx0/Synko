@@ -65,27 +65,39 @@ internal sealed class MediaMonitor(bool probeAddress = false)
             if (source.Source == MediaSource.Browser) source = (source.Source, BrowserIdentity.ForSession(source.Name));
             var media = MediaMetadata.Normalize(new(appId, source.Name, source.Source, properties.Title ?? "", properties.Artist ?? "",
                 properties.AlbumTitle ?? "", playing, session.Equals(current), position, duration, rate, now));
-            if (properties.Thumbnail is { } thumbnail)
+            _thumbnails.TryGetValue(media.TrackKey, out var picture);
+            if (picture is null && properties.Thumbnail is { } thumbnail)
             {
-                if (!_thumbnails.TryGetValue(media.TrackKey, out var picture))
+                try
                 {
-                    try
+                    using var imageTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                    imageTimeout.CancelAfter(TimeSpan.FromMilliseconds(600));
+                    using var stream = await thumbnail.OpenReadAsync().AsTask(imageTimeout.Token);
+                    if (stream.Size is > 0 and <= 2 * 1024 * 1024)
                     {
-                        using var stream = await thumbnail.OpenReadAsync().AsTask(timeout.Token);
-                        if (stream.Size is > 0 and <= 2 * 1024 * 1024 && stream.ContentType.StartsWith("image/", StringComparison.Ordinal))
+                        using var reader = new DataReader(stream);
+                        await reader.LoadAsync((uint)stream.Size).AsTask(imageTimeout.Token);
+                        var bytes = new byte[stream.Size]; reader.ReadBytes(bytes);
+                        var type = stream.ContentType;
+                        if (!type.StartsWith("image/", StringComparison.Ordinal))
                         {
-                            using var reader = new DataReader(stream);
-                            await reader.LoadAsync((uint)stream.Size).AsTask(timeout.Token);
-                            var bytes = new byte[stream.Size]; reader.ReadBytes(bytes);
-                            picture = "data:" + stream.ContentType + ";base64," + Convert.ToBase64String(bytes);
-                            if (_thumbnails.Count >= 32) _thumbnails.Clear();
-                            _thumbnails.TryAdd(media.TrackKey, picture);
+                            // Some players expose image bytes as a generic
+                            // stream. Windows can still decode them locally.
+                            using var input = new MemoryStream(bytes);
+                            using var image = Image.FromStream(input);
+                            using var output = new MemoryStream();
+                            image.Save(output, System.Drawing.Imaging.ImageFormat.Png);
+                            bytes = output.ToArray();
+                            type = "image/png";
                         }
+                        picture = "data:" + type + ";base64," + Convert.ToBase64String(bytes);
+                        if (_thumbnails.Count >= 32) _thumbnails.Clear();
+                        _thumbnails.TryAdd(media.TrackKey, picture);
                     }
-                    catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is IOException or System.Runtime.InteropServices.COMException or OperationCanceledException) { }
                 }
-                media = media with { ThumbnailData = picture };
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested && ex is IOException or System.Runtime.InteropServices.COMException or OperationCanceledException or ArgumentException) { }
             }
+            media = media with { ThumbnailData = picture };
             return media;
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested &&

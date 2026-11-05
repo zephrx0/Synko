@@ -37,6 +37,8 @@ internal static class PreviewRunner
                     try
                     {
                         if (form != primary) { primary.Hide(); form.Show(); await form.Ready.WaitAsync(TimeSpan.FromSeconds(25)); }
+                        form.TopMost = true;
+                        form.Activate();
                         form.Send(new { type = "state", state = snapshot });
                         await WaitAsync(form, "window.synko.diagnostics().state !== null && [...document.querySelectorAll('.app-shell > *')].every(e=>getComputedStyle(e).opacity==='1')");
                         await WaitAsync(form, "!document.querySelector('.cover img') || document.querySelector('.cover img').complete");

@@ -51,20 +51,23 @@ try {
     $activity = $diagnostic.activity
     $payload = @{ cmd = 'SET_ACTIVITY'; args = @{ pid = $PID; activity = $activity }; nonce = $nonce } | ConvertTo-Json -Depth 8 -Compress
     Write-Frame 1 ([Text.Encoding]::UTF8.GetBytes($payload))
+    $artworkTimer = [Diagnostics.Stopwatch]::StartNew()
     $ack = Read-Message
     if ($ack.nonce -ne $nonce) { throw 'Unexpected Discord RPC acknowledgment.' }
     if ($ack.data.name -ne $activity.name -or $ack.data.type -ne $activity.type) { throw 'Discord did not apply the requested activity name and type.' }
-    if ([string]$activity.assets.large_image -like 'https://i.ytimg.com/*') {
+    $image = [string]$activity.assets.large_image
+    $publicArtwork = $image -like 'https://i.ytimg.com/*' -or $image -match '^https://[^/]+\.mzstatic\.com/'
+    if ($publicArtwork) {
         $expected = [Uri]$activity.assets.large_image
         $actual = [string]$ack.data.assets.large_image
-        if (-not $actual.Contains($expected.Host + $expected.AbsolutePath)) { throw 'Discord did not resolve the requested YouTube thumbnail.' }
+        if (-not $actual.Contains($expected.Host + $expected.AbsolutePath)) { throw 'Discord did not resolve the requested artwork.' }
     }
     $clearNonce = [Guid]::NewGuid().ToString('N')
     $clearPayload = @{ cmd = 'SET_ACTIVITY'; args = @{ pid = $PID; activity = $null }; nonce = $clearNonce } | ConvertTo-Json -Depth 4 -Compress
     Write-Frame 1 ([Text.Encoding]::UTF8.GetBytes($clearPayload))
     $clearAck = Read-Message
     if ($clearAck.nonce -ne $clearNonce) { throw 'Discord did not acknowledge activity removal.' }
-    $result = @{ success = $true; acknowledged = $true; requestedName = $activity.name; requestedType = $activity.type; thumbnailVerified = ([string]$activity.assets.large_image -like 'https://i.ytimg.com/*'); clearAcknowledged = $true }
+    $result = @{ success = $true; acknowledged = $true; requestedName = $activity.name; requestedType = $activity.type; artworkVerified = $publicArtwork; artworkAcknowledgedMilliseconds = $artworkTimer.Elapsed.TotalMilliseconds; thumbnailVerified = ($image -like 'https://i.ytimg.com/*'); clearAcknowledged = $true }
     $result | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $Output -Encoding UTF8
     Write-Output 'Discord confirmed activity, thumbnail when available, and activity removal.'
 }

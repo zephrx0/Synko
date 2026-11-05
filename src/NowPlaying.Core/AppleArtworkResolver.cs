@@ -14,13 +14,16 @@ public interface IArtworkResolver
     Task<ArtworkResult> ResolveAsync(MediaSnapshot media, CancellationToken cancellationToken);
 }
 
-public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProvider = null, TimeSpan? requestInterval = null) : IArtworkResolver
+public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProvider = null, TimeSpan? requestInterval = null,
+    string? cacheFile = null) : IArtworkResolver
 {
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
     private readonly TimeSpan _interval = requestInterval ?? TimeSpan.FromSeconds(3.2);
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, ArtworkResult> _cache = new(StringComparer.Ordinal);
     private DateTimeOffset _nextRequest;
+    private DateTimeOffset _rateLimitUntil;
+    private bool _loaded;
 
     public async Task<ArtworkResult> ResolveAsync(MediaSnapshot raw, CancellationToken cancellationToken)
     {
@@ -31,7 +34,13 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
         await _gate.WaitAsync(cancellationToken);
         try
         {
+            LoadCache();
             if (_cache.TryGetValue(key, out var cached) && cached.ExpiresAt > _time.GetUtcNow()) return cached;
+            var albumKey = string.IsNullOrWhiteSpace(media.Album) ? null : $"album\n{Normalize(media.Artist)}\n{NormalizeAlbum(media.Album)}";
+            if (albumKey is not null && _cache.TryGetValue(albumKey, out cached) && cached.ExpiresAt > _time.GetUtcNow())
+                return cached;
+            if (_rateLimitUntil > _time.GetUtcNow())
+                return new(null, "Обложка: лимит запросов Apple; повторю позже", _rateLimitUntil);
             ArtworkResult result;
             try
             {
@@ -40,7 +49,7 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested &&
                 ex is HttpRequestException or OperationCanceledException or JsonException or IOException)
             {
-                result = new(null, "Обложка: каталог Apple временно недоступен; повторю поиск", _time.GetUtcNow().AddMinutes(2));
+                result = new(null, "Обложка: каталог Apple временно недоступен; повторю поиск", _time.GetUtcNow().AddSeconds(10));
             }
             if (_cache.Count >= 256)
             {
@@ -48,6 +57,14 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
                 _cache.Remove(oldest);
             }
             _cache[key] = result;
+            if (result.Match is { } match)
+            {
+                // Reuse only the same artist AND album. A song URL from the
+                // first track must not become the button for another song.
+                if (albumKey is not null && NormalizeAlbum(match.Album) == NormalizeAlbum(media.Album))
+                    _cache[albumKey] = result with { Match = match with { AppleMusicUrl = null } };
+                SaveCache();
+            }
             return result;
         }
         finally { _gate.Release(); }
@@ -60,9 +77,11 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
 
         // Album search also works when a particular song is absent from the
         // public store but another song from the same album is still indexed.
-        var terms = new[] { media.Album, media.Title }.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToArray();
+        var terms = new[] { media.Album, media.Title }.Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select(term => media.Artist + " " + term).Distinct().ToArray();
         var countries = CultureInfo.CurrentCulture.Name.EndsWith("-RU", StringComparison.OrdinalIgnoreCase)
             || ContainsCyrillic(media.Artist) ? new[] { "ru", "us" } : new[] { "us", "ru" };
+        var failed = false;
         foreach (var country in countries)
         foreach (var term in terms)
         {
@@ -72,20 +91,66 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
             var uri = new Uri("https://itunes.apple.com/search?media=music&entity=song&limit=50&country="
                 + country + "&term=" + Uri.EscapeDataString(term));
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(8));
-            using var response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
-                return new(null, "Обложка: лимит запросов Apple; повторю позже", _time.GetUtcNow().AddMinutes(3));
-            response.EnsureSuccessStatusCode();
-            // Bound the response before parsing it, including chunked responses.
-            await response.Content.LoadIntoBufferAsync(2 * 1024 * 1024, timeout.Token);
-            await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
-            using var json = await JsonDocument.ParseAsync(stream, cancellationToken: timeout.Token);
-            var match = MatchResults(media, json.RootElement);
-            if (match is not null)
-                return new(match, "Обложка альбома найдена в Apple Music", _time.GetUtcNow().AddHours(24));
+            timeout.CancelAfter(TimeSpan.FromSeconds(4));
+            try
+            {
+                using var response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    var retry = response.Headers.RetryAfter;
+                    _rateLimitUntil = retry?.Date ?? _time.GetUtcNow() + (retry?.Delta ?? TimeSpan.FromSeconds(30));
+                    if (_rateLimitUntil < _time.GetUtcNow().AddSeconds(3)) _rateLimitUntil = _time.GetUtcNow().AddSeconds(3);
+                    return new(null, "Обложка: лимит запросов Apple; повторю позже", _rateLimitUntil);
+                }
+                response.EnsureSuccessStatusCode();
+                await response.Content.LoadIntoBufferAsync(2 * 1024 * 1024, timeout.Token);
+                await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
+                using var json = await JsonDocument.ParseAsync(stream, cancellationToken: timeout.Token);
+                var match = MatchResults(media, json.RootElement);
+                if (match is not null)
+                    return new(match, "Обложка альбома найдена в Apple Music", _time.GetUtcNow().AddDays(7));
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested &&
+                ex is HttpRequestException or OperationCanceledException or JsonException or IOException)
+            {
+                // Try the next query/storefront instead of suppressing the
+                // entire track for minutes after one transient response.
+                failed = true;
+            }
         }
-        return new(null, "Обложка не найдена в каталоге Apple — используется резервная иконка", _time.GetUtcNow().AddMinutes(15));
+        return new(null, failed ? "Обложка: каталог Apple временно недоступен; повторю поиск"
+            : "Обложка не найдена в каталоге Apple", _time.GetUtcNow().AddSeconds(failed ? 10 : 60));
+    }
+
+    private void LoadCache()
+    {
+        if (_loaded) return;
+        _loaded = true;
+        if (cacheFile is null) return;
+        try
+        {
+            if (!File.Exists(cacheFile) || new FileInfo(cacheFile).Length > 1024 * 1024) return;
+            var entries = JsonSerializer.Deserialize<Dictionary<string, ArtworkResult>>(File.ReadAllText(cacheFile));
+            if (entries is null) return;
+            foreach (var entry in entries.Where(e => e.Value is not null && e.Value.ExpiresAt > _time.GetUtcNow()
+                && e.Value.Match is { } match && ArtworkUrl(match.ImageUrl) is not null).Take(256))
+                _cache[entry.Key] = entry.Value with { Match = entry.Value.Match! with { AppleMusicUrl = StoreUrl(entry.Value.Match.AppleMusicUrl ?? "") } };
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or ArgumentException) { }
+    }
+
+    private void SaveCache()
+    {
+        if (cacheFile is null) return;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(cacheFile))!);
+            var entries = _cache.Where(e => e.Value.Match is not null && e.Value.ExpiresAt > _time.GetUtcNow())
+                .OrderByDescending(e => e.Value.ExpiresAt).Take(256).ToDictionary();
+            File.WriteAllText(cacheFile + ".tmp", JsonSerializer.Serialize(entries));
+            File.Move(cacheFile + ".tmp", cacheFile, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
     }
 
     public static ArtworkMatch? MatchResults(MediaSnapshot raw, JsonElement response)

@@ -10,6 +10,8 @@
 
 ## Русский
 
+Версия 2.2.1 исправляет задержки обложек: локальная картинка Windows показывается сразу, сбои сети повторяются автоматически, кэш сохраняется между запусками.
+
 ### Возможности
 
 - Apple Music и браузеры через медиасессии Windows, без токена Discord
@@ -71,6 +73,8 @@ Start-Process .\artifacts\Synko-win-x64\Synko.exe -ArgumentList '--preview-ui', 
 Проверка интерфейса использует отдельные настройки и тестовую ветку реестра, не публикует активность и не меняет пользовательский автозапуск. Подробности: [матрица проверок](docs/TESTING.md), [публикация и обновление](docs/PUBLISHING.md).
 
 ## English
+
+Version 2.2.1 fixes delayed artwork with immediate Windows thumbnails, automatic retries after network failures and a persistent local cache.
 
 Synko shows Apple Music and browser playback in your Discord profile using Windows media sessions and local Discord RPC.
 

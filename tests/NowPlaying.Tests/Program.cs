@@ -248,10 +248,80 @@ await Run("Artwork lookup backs off on rate limit and network failure", async ()
         var media = Media("AppleMusic.exe", MediaSource.AppleMusic);
         var result = await resolver.ResolveAsync(media, default);
         Equal<ArtworkMatch?>(null, result.Match);
-        Check(result.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1), "Retry must back off");
+        Check(result.ExpiresAt > DateTimeOffset.UtcNow.AddSeconds(5) && result.ExpiresAt < DateTimeOffset.UtcNow.AddSeconds(40), "Backoff must not hide artwork for minutes");
         await resolver.ResolveAsync(media, default);
-        Equal(1, requests);
+        Equal(status == System.Net.HttpStatusCode.TooManyRequests ? 1 : 4, requests);
     }
+});
+
+await Run("Artwork recovers from a failed storefront without waiting for a multi-minute negative cache", async () =>
+{
+    var requests = 0;
+    using var handler = new FakeHttpHandler(request =>
+    {
+        requests++;
+        Check(Uri.UnescapeDataString(request.RequestUri!.Query).Contains("term=Artist "), "Search must include the artist");
+        return requests == 1 ? new(System.Net.HttpStatusCode.ServiceUnavailable)
+            : new(System.Net.HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(new { results = new[] { Catalog("Song", "Artist", "Album") } })) };
+    });
+    using var http = new HttpClient(handler);
+    var result = await new AppleArtworkResolver(http, requestInterval: TimeSpan.Zero).ResolveAsync(Media("AppleMusic.exe", MediaSource.AppleMusic), default);
+    Check(result.Match is not null, "Second query must recover immediately");
+    Equal(2, requests);
+});
+
+await Run("Artwork reuses a saved album after restart without sharing the previous song's URL", async () =>
+{
+    var folder = Path.Combine(Path.GetTempPath(), "synko-artwork-" + Guid.NewGuid().ToString("N"));
+    var path = Path.Combine(folder, "catalog.json");
+    var requests = 0;
+    try
+    {
+        using var handler = new FakeHttpHandler(_ =>
+        {
+            requests++;
+            return new(System.Net.HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(new { results = new[] { Catalog("Song", "Artist", "Album") } })) };
+        });
+        using var http = new HttpClient(handler);
+        var first = Media("AppleMusic.exe", MediaSource.AppleMusic);
+        var resolver = new AppleArtworkResolver(http, requestInterval: TimeSpan.Zero, cacheFile: path);
+        var original = await resolver.ResolveAsync(first, default);
+        var restarted = new AppleArtworkResolver(http, requestInterval: TimeSpan.Zero, cacheFile: path);
+        var next = await restarted.ResolveAsync(first with { Title = "Another song" }, default);
+        Equal(original.Match!.ImageUrl, next.Match!.ImageUrl);
+        Equal<string?>(null, next.Match.AppleMusicUrl);
+        Equal(1, requests);
+        var other = await restarted.ResolveAsync(first with { Artist = "Different artist" }, default);
+        Equal<ArtworkMatch?>(null, other.Match);
+        Check(requests > 1, "Different artist must not inherit the cached album");
+    }
+    finally { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+});
+
+await Run("Apple Retry-After applies across tracks and expires without a three-minute delay", async () =>
+{
+    var time = new ArtworkTestClock();
+    var requests = 0;
+    using var handler = new FakeHttpHandler(_ =>
+    {
+        requests++;
+        if (requests == 1)
+        {
+            var limited = new HttpResponseMessage(System.Net.HttpStatusCode.TooManyRequests);
+            limited.Headers.RetryAfter = new(TimeSpan.FromSeconds(12));
+            return limited;
+        }
+        return new(System.Net.HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(new { results = new[] { Catalog("Song", "Artist", "Album") } })) };
+    });
+    using var http = new HttpClient(handler);
+    var resolver = new AppleArtworkResolver(http, time, TimeSpan.Zero);
+    var first = Media("AppleMusic.exe", MediaSource.AppleMusic);
+    await resolver.ResolveAsync(first, default);
+    await resolver.ResolveAsync(first with { Title = "Other" }, default);
+    Equal(1, requests);
+    time.Advance(TimeSpan.FromSeconds(13));
+    Check((await resolver.ResolveAsync(first, default)).Match is not null, "Retry after server-requested delay");
+    Equal(2, requests);
 });
 await Run("Artwork lookup does not attach a previous song's delayed result after switching or disabling", async () =>
 {
@@ -482,6 +552,13 @@ sealed class FakeHttpHandler(Func<HttpRequestMessage, HttpResponseMessage> respo
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         => Task.FromResult(response(request));
+}
+
+sealed class ArtworkTestClock : TimeProvider
+{
+    private DateTimeOffset _now = DateTimeOffset.UtcNow;
+    public override DateTimeOffset GetUtcNow() => _now;
+    public void Advance(TimeSpan elapsed) => _now += elapsed;
 }
 
 sealed class DelayedArtworkResolver : IArtworkResolver
