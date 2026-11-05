@@ -6,11 +6,9 @@
 
 Музыка Apple Music и видео из браузера в профиле Discord. Нативная фоновая служба Windows, локальный интерфейс, светлая и тёмная темы.
 
-<img src="docs/images/synko-preview.png" width="488" alt="Synko: Apple Music, обложка трека и публикация в Discord">
+<img src="docs/images/synko-2.3-d753d6cc.png" width="488" alt="Synko: Apple Music, обложка трека и публикация в Discord">
 
 ## Русский
-
-В версии 2.3 источники воспроизведения показаны отдельными полупрозрачными плашками в цвет темы, а шкала времени обходится без лишних маркеров. Быстрые обложки и кэш из 2.2.1 сохранены.
 
 ### Возможности
 
@@ -73,8 +71,6 @@ Start-Process .\artifacts\Synko-win-x64\Synko.exe -ArgumentList '--preview-ui', 
 Проверка интерфейса использует отдельные настройки и тестовую ветку реестра, не публикует активность и не меняет пользовательский автозапуск. Подробности: [матрица проверок](docs/TESTING.md), [публикация и обновление](docs/PUBLISHING.md).
 
 ## English
-
-Version 2.3 adds translucent source status labels that follow the app theme and a cleaner playback timeline. Fast Windows artwork, automatic retries and the persistent cache from 2.2.1 are retained.
 
 Synko shows Apple Music and browser playback in your Discord profile using Windows media sessions and local Discord RPC.
 
