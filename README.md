@@ -6,7 +6,7 @@
 
 Музыка Apple Music и видео из браузера в профиле Discord. Нативная фоновая служба Windows, локальный интерфейс, светлая и тёмная темы.
 
-<img src="docs/images/synko-preview.png" width="498" alt="Synko: Apple Music, обложка трека и публикация в Discord">
+<img src="docs/images/synko-preview.png" width="488" alt="Synko: Apple Music, обложка трека и публикация в Discord">
 
 ## Русский
 
