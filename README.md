@@ -25,8 +25,6 @@
 
 ### Установка
 
-Spotify поддерживается через его настольный клиент Windows, включая версию Microsoft Store. Авторизация Spotify и дополнительные ключи не требуются. Обложка в приложении берётся из медиапанели Windows; публичная обложка для Discord ищется в каталоге Apple по названию, исполнителю и альбому. Это регулируется настройкой «Обложки музыки».
-
 Windows 10/11 x64. Нужен Microsoft Edge WebView2 Runtime. Отдельно устанавливать .NET для автономной сборки не требуется.
 
 Скачайте [Synko-win-x64.zip](https://github.com/zephrx0/Synko/releases/latest/download/Synko-win-x64.zip), распакуйте в постоянную папку и запустите `Synko.exe`.
@@ -90,8 +88,6 @@ Synko shows Apple Music, Spotify and browser playback in your Discord profile us
 - Startup registration and verified updates from GitHub Releases
 
 ### Setup
-
-Spotify support uses its Windows desktop client, including the Microsoft Store version. No Spotify sign-in or developer keys are needed. In-app artwork comes from Windows media sessions; public Discord artwork is matched in the Apple catalogue by title, artist and album. The Music artwork setting controls this lookup.
 
 Windows 10/11 x64 and Microsoft Edge WebView2 Runtime are required. The portable build includes .NET.
 

@@ -14,3 +14,4 @@
 - Keep the owner's supplied screenshot in the README.
 - Do not modify application binaries or change their checksums merely to update repository metadata or authorship.
 - Use relevant GitHub topics such as Apple Music, Discord Rich Presence, YouTube and Windows for discovery.
+- Keep README and release descriptions focused on features and installation. Do not add Spotify account/key explanations, test counts, simulated-test reports or notes about the test machine. Keep verification details in dedicated testing documentation.
