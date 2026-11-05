@@ -66,7 +66,6 @@ export class WavyProgress {
     const color = forcedColors ? getComputedStyle(this.canvas).color
       : this.palette?.onPrimaryContainer ?? getComputedStyle(this.canvas).getPropertyValue("--md-sys-color-on-primary-container").trim();
     context.strokeStyle = color;
-    context.fillStyle = color;
     context.lineWidth = 4;
     context.lineCap = "round";
     if (!this.media) {
@@ -77,11 +76,12 @@ export class WavyProgress {
     }
     const stream = this.media && this.media.duration <= 0;
     const head = 2 + Math.max(0, Math.min(1, this.position.value)) * (width - 4);
-    const waveEnd = stream ? width - 2 : Math.max(2, head - 6);
+    const waveEnd = stream || this.position.value >= 1 ? width - 2 : Math.max(2, head - 4);
     if (stream || waveEnd > 2) {
       context.beginPath();
       for (let x = 2; x <= waveEnd; x += .5) {
-        const y = 12 + Math.sin((x - 2) / 40 * Math.PI * 2 - this.phase) * this.amplitude.value;
+        const taper = Math.min(1, (x - 2) / 12, (waveEnd - x) / 12);
+        const y = 12 + Math.sin((x - 2) / 40 * Math.PI * 2 - this.phase) * this.amplitude.value * taper;
         if (x === 2) context.moveTo(x, y); else context.lineTo(x, y);
       }
       context.stroke();
@@ -89,9 +89,7 @@ export class WavyProgress {
     if (!stream) {
       context.globalAlpha = .24;
       if (head + 6 < width - 2) { context.beginPath(); context.moveTo(head + 6, 12); context.lineTo(width - 2, 12); context.stroke(); }
-      context.beginPath(); context.arc(width - 2, 12, 2, 0, Math.PI * 2); context.fill();
       context.globalAlpha = 1;
-      context.beginPath(); context.roundRect(head - 2, 2, 4, 20, 2); context.fill();
     }
   }
 

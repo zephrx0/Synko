@@ -60,6 +60,8 @@ internal static class PreviewRunner
                         form.TopMost = false;
                         var report = await CheckMainAsync(form, scale);
                         reports.Add(new { theme, scale, checks = report });
+                        var statuses = await CheckSourceStatusesAsync(form, snapshot, outputFolder, slug);
+                        reports.Add(new { theme, scale, statuses });
                         form.Send(new { type = "state", state = snapshot with { Preferences = LiveSnapshot.Preferences(SettingsStore.Load() with { OnboardingDone = true, ThemeMode = "system", OnboardingStep = 0 }) } });
                         await CaptureAdditionalAsync(form, outputFolder, slug);
                     }
@@ -148,6 +150,39 @@ internal static class PreviewRunner
 
     private static async Task<int> ReadFramesAsync(SynkoWindow form)
         => int.Parse(await form.Web.ExecuteScriptAsync("window.synko.diagnostics().wave.frames"), System.Globalization.CultureInfo.InvariantCulture);
+
+    private static async Task<JsonElement> CheckSourceStatusesAsync(SynkoWindow form, UiSnapshot snapshot, string folder, string slug)
+    {
+        form.Send(new { type = "state", state = snapshot with { Sources = [new("apple", "Apple Music", true), new("browser:Google Chrome", "Chrome", false, "Google Chrome")] } });
+        await WaitAsync(form, "document.querySelectorAll('.source-status').length === 2");
+        await Task.Delay(250);
+        await using (var output = File.Create(Path.Combine(folder, slug + "-sources.png")))
+            await form.Web.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, output);
+        var result = await EvaluateAsync(form, """
+            (()=>{
+              const row=document.querySelector('.source-row'), pills=[...row.children], bounds=row.getBoundingClientRect();
+              const left=pills[0].getBoundingClientRect(), right=pills[1].getBoundingClientRect();
+              const saved=structuredClone(window.synko.diagnostics().state);
+              let noSquare=true;
+              for(const position of [0,50,100]){
+                const state=structuredClone(saved);
+                state.media={...(state.media||{}),key:'progress-check-'+position,position,duration:100,rate:1,observedAt:Date.now(),playing:false};
+                window.synko.receive({type:'state',state});
+                const canvas=document.querySelector('canvas'), context=canvas.getContext('2d'), y=Math.round(4*devicePixelRatio);
+                const strip=context.getImageData(0,y,canvas.width,1).data;
+                if(strip.some((value,index)=>index%4===3&&value>0))noSquare=false;
+              }
+              window.synko.receive({type:'state',state:saved});
+              return JSON.stringify({twoSides:Math.abs(left.left-bounds.left)<1&&Math.abs(right.right-bounds.right)<1&&right.left>left.right,
+                nonInteractive:pills.every(e=>!e.matches('button,[role="button"]')&&e.tabIndex<0&&getComputedStyle(e).cursor==='default'),
+                separateLabels:pills.every(e=>e.querySelector('.source-name')&&e.querySelector('.source-playback')),
+                insideWindow:left.width>0&&right.right<=innerWidth,rounded:pills.every(e=>parseFloat(getComputedStyle(e).borderRadius)>=16),noSquare});
+            })()
+            """);
+        RequireAll(result);
+        form.Send(new { type = "state", state = snapshot });
+        return result;
+    }
 
     private static async Task CaptureAdditionalAsync(SynkoWindow form, string folder, string slug)
     {

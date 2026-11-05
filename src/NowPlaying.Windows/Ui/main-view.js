@@ -78,17 +78,23 @@ export class MainView {
       if (!sources.some(source => source.id === id)) { element.remove(); this.sourceElements.delete(id); }
     }
     for (const [index, source] of sources.entries()) {
-      const label = `${source.name}   ${source.playing ? "играет" : "пауза"}`;
       let element = this.sourceElements.get(source.id);
       if (!element) {
         element = document.createElement("div");
         element.className = "source-status";
-        const caption = document.createElement("span");
-        element.append(symbol(source.id === "apple" ? iconFor("apple") : source.id.startsWith("player:") ? "music_note" : browserIcon(source.browser || source.name), true), caption);
-        element.setState = (text, active) => { caption.textContent = text; element.dataset.playing = String(active); };
-        element.setState(label, source.playing);
+        const caption = document.createElement("span"), status = document.createElement("span");
+        caption.className = "source-name";
+        status.className = "source-playback";
+        element.append(symbol(source.id === "apple" ? iconFor("apple") : source.id.startsWith("player:") ? "music_note" : browserIcon(source.browser || source.name), true), caption, status);
+        element.setState = (name, active) => {
+          caption.textContent = name;
+          status.textContent = active ? "играет" : "пауза";
+          element.dataset.playing = String(active);
+          element.setAttribute("aria-label", `${name}, ${status.textContent}`);
+        };
+        element.setState(source.name, source.playing);
         this.sourceElements.set(source.id, element);
-      } else element.setState(label, source.playing);
+      } else element.setState(source.name, source.playing);
       if (row.children[index] !== element) row.insertBefore(element, row.children[index] || null);
     }
   }

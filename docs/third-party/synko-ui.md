@@ -10,8 +10,6 @@
 
 Локальные SVG Apple Music, Discord и YouTube: [Simple Icons](https://github.com/simple-icons/simple-icons), CC0; исходные файлы и лицензия включены в `Ui/assets`. Использование товарных знаков не означает принадлежность приложения к Apple, Discord или YouTube.
 
-При доработке интерфейса использован [Unslop](https://heydamir.design/unslop) — Damir Sokolovsky ([@heydamir](https://x.com/heydamir)), CC BY 4.0.
-
 ## Synko 2.2
 
 Material Symbols Rounded заменён на официальный локальный subset только используемых символов (4 140 байт вместо 5 402 952). Источник: Google Fonts CSS API с `icon_names`, локальный WOFF2, Apache-2.0. Цвет и форма иконок управляются теми же UI-компонентами.

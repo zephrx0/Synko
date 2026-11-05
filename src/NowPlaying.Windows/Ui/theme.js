@@ -32,6 +32,7 @@ export function applyTheme(options = {}, animateChange = true) {
   const next = colors(seed, dark);
   document.documentElement.dataset.dark = String(dark);
   document.documentElement.dataset.highContrast = String(environment.highContrast);
+  document.documentElement.dataset.reducedMotion = String(environment.reducedMotion === true);
   window.chrome?.webview?.postMessage({ type: "palette", surface: next.surface, foreground: next.onSurface, dark });
   const start = current;
   current = next;
