@@ -37,6 +37,7 @@ internal static class PreviewRunner
                     try
                     {
                         if (form != primary) { primary.Hide(); form.Show(); await form.Ready.WaitAsync(TimeSpan.FromSeconds(25)); }
+                        form.Show();
                         form.TopMost = true;
                         form.Activate();
                         form.Send(new { type = "visibility", visible = true });

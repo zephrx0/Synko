@@ -62,6 +62,7 @@ try {
         $actual = [string]$ack.data.assets.large_image
         if (-not $actual.Contains($expected.Host + $expected.AbsolutePath)) { throw 'Discord did not resolve the requested artwork.' }
     }
+    $artworkTimer.Stop()
     $clearNonce = [Guid]::NewGuid().ToString('N')
     $clearPayload = @{ cmd = 'SET_ACTIVITY'; args = @{ pid = $PID; activity = $null }; nonce = $clearNonce } | ConvertTo-Json -Depth 4 -Compress
     Write-Frame 1 ([Text.Encoding]::UTF8.GetBytes($clearPayload))
