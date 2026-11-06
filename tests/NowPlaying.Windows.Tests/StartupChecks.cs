@@ -50,15 +50,25 @@ internal static class StartupChecks
 
             using var signal = new EventWaitHandle(false, EventResetMode.AutoReset);
             using var context = new TrayApplication(new AppSettings { Enabled = false, AutoCheckUpdates = false, OnboardingDone = false }, signal, background: true);
-            try { Check(!context.Window.Visible, "Background launch must not expose unfinished onboarding"); }
-            finally
+            using var timer = new System.Windows.Forms.Timer { Interval = 100 };
+            Exception? loopFailure = null;
+            var shown = false;
+            context.Window.Shown += (_, _) => shown = true;
+            timer.Tick += async (_, _) =>
             {
-                var exit = context.ExitAsync();
-                var deadline = DateTime.UtcNow.AddSeconds(5);
-                while (!exit.IsCompleted && DateTime.UtcNow < deadline) { Application.DoEvents(); Thread.Sleep(10); }
-                Check(exit.IsCompleted, "Background service did not stop");
-                exit.GetAwaiter().GetResult();
-            }
+                timer.Stop();
+                try
+                {
+                    Check(!context.Window.Visible && !shown, "Application.Run exposed the background window after the constructor");
+                    await Task.Delay(1000);
+                    Check(!context.Window.Visible && !shown && !context.Window.Ready.IsCompleted, "Background startup must not show or initialise WebView after the message loop starts");
+                }
+                catch (Exception ex) { loopFailure = ex; }
+                finally { await context.ExitAsync(); }
+            };
+            timer.Start();
+            Application.Run(context);
+            if (loopFailure is not null) throw new InvalidOperationException("Background message loop regression", loopFailure);
             Console.WriteLine("PASS quiet startup defaults, opt-out persistence, explicit Run/restart commands, native Windows registration and hidden onboarding");
         }
         finally
@@ -67,7 +77,8 @@ internal static class StartupChecks
             SettingsStore.OverrideFolder = previousFolder;
             StartupRegistration.OverrideRegistryPath = previousRegistry;
             Registry.CurrentUser.DeleteSubKeyTree(registryPath, throwOnMissingSubKey: false);
-            if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
+            try { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* A failed startup may have started WebView before this regression check. */ }
         }
     }
 

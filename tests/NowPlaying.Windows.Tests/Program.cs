@@ -39,8 +39,9 @@ internal static class Program
             FeatureChecks.Run(Path.GetDirectoryName(path)!);
             ArtworkChecks.RunAsync(Path.GetDirectoryName(path)!).GetAwaiter().GetResult();
             SpotifyChecks.Run();
-            StartupChecks.Run();
             BrowserChecks.Run();
+            // This check runs and shuts down the STA's main message loop.
+            StartupChecks.Run();
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

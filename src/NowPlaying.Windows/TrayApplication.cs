@@ -35,7 +35,10 @@ internal sealed class TrayApplication : ApplicationContext
             if (!_exiting && !_window.IsDisposed)
                 _window.BeginInvoke(() => { if (!_exiting) PushState(); });
         };
-        MainForm = _window;
+        // Application.Run makes ApplicationContext.MainForm visible itself.
+        // Keep the tray context independent of the window so a background
+        // launch stays hidden after the real message loop starts.
+        _window.FormClosed += (_, _) => ExitThread();
         _window.CommandReceived += OnUiCommand;
         _updates.Changed += () =>
         {
