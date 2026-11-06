@@ -68,17 +68,19 @@ internal static class StartupRegistration
         using var key = Registry.CurrentUser.OpenSubKey(RegistryPath);
         return key?.GetValue(ValueName) is string || key?.GetValue("NowPlaying") is string || key?.GetValue("Now Playing") is string;
     }
-    public static void SetEnabled(bool enabled)
+    public static void SetEnabled(bool enabled, bool? quiet = null)
     {
+        var silent = quiet ?? SettingsStore.Load().QuietStartup;
         using var key = Registry.CurrentUser.CreateSubKey(RegistryPath);
-        if (enabled) key.SetValue(ValueName, $"\"{Environment.ProcessPath}\" --startup");
+        if (enabled) key.SetValue(ValueName, $"\"{Environment.ProcessPath}\" {WindowsRestart.Arguments(silent)}");
         else key.DeleteValue(ValueName, throwOnMissingValue: false);
         key.DeleteValue("NowPlaying", throwOnMissingValue: false);
         key.DeleteValue("Now Playing", throwOnMissingValue: false);
+        WindowsRestart.Configure(enabled, silent);
     }
 
     public static void Migrate()
     {
-        if (IsEnabled()) SetEnabled(true);
+        SetEnabled(IsEnabled());
     }
 }

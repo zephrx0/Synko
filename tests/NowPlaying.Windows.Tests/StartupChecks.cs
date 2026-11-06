@@ -38,6 +38,15 @@ internal static class StartupChecks
             }
             StartupRegistration.SetEnabled(false);
             Check(!StartupRegistration.IsEnabled(), "Autostart must still be removable");
+            Check(WindowsRestart.ReadArguments() is null, "Disabling startup must remove this process's restart registration");
+            StartupRegistration.SetEnabled(true, quiet: true);
+            using (var key = Registry.CurrentUser.OpenSubKey(registryPath))
+                Check((string?)key?.GetValue("Synko") == $"\"{Environment.ProcessPath}\" --startup --background", "Quiet autostart must explicitly contain the background argument");
+            Check(WindowsRestart.ReadArguments() == "--startup --background", "Windows restoration must use the quiet command, not an empty/manual launch");
+            Check(NowPlaying.Windows.Program.IsBackgroundLaunch(WindowsRestart.ReadArguments()!.Split(' '), settings), "The registered restart command must remain in the tray");
+            StartupRegistration.SetEnabled(true, quiet: false);
+            Check(WindowsRestart.ReadArguments() == "--startup", "Opting out must refresh the Windows restart command immediately");
+            StartupRegistration.SetEnabled(false);
 
             using var signal = new EventWaitHandle(false, EventResetMode.AutoReset);
             using var context = new TrayApplication(new AppSettings { Enabled = false, AutoCheckUpdates = false, OnboardingDone = false }, signal, background: true);
@@ -50,10 +59,11 @@ internal static class StartupChecks
                 Check(exit.IsCompleted, "Background service did not stop");
                 exit.GetAwaiter().GetResult();
             }
-            Console.WriteLine("PASS quiet startup defaults, opt-out persistence, launch policy, registry migration and hidden onboarding");
+            Console.WriteLine("PASS quiet startup defaults, opt-out persistence, explicit Run/restart commands, native Windows registration and hidden onboarding");
         }
         finally
         {
+            WindowsRestart.Configure(false, true);
             SettingsStore.OverrideFolder = previousFolder;
             StartupRegistration.OverrideRegistryPath = previousRegistry;
             Registry.CurrentUser.DeleteSubKeyTree(registryPath, throwOnMissingSubKey: false);

@@ -56,9 +56,11 @@ internal static class SmokeRunner
                 await window.Web.ExecuteScriptAsync("[...document.querySelectorAll('.settings-row')].find(r=>r.querySelector('.row-label')?.textContent==='Тихий запуск').querySelector('[role=switch]').click()");
                 await WaitAsync(window, "window.synko.diagnostics().state.preferences.quietStartup === false");
                 Require(!SettingsStore.Load().QuietStartup && StartupRegistration.IsEnabled(), "Quiet opt-out must persist independently of autostart");
+                Require(WindowsRestart.ReadArguments() == "--startup", "Quiet opt-out must immediately update Windows restoration");
                 await window.Web.ExecuteScriptAsync("[...document.querySelectorAll('.settings-row')].find(r=>r.querySelector('.row-label')?.textContent==='Тихий запуск').querySelector('[role=switch]').click()");
                 await WaitAsync(window, "window.synko.diagnostics().state.preferences.quietStartup === true");
                 Require(SettingsStore.Load().QuietStartup, "Quiet startup re-enabling must persist");
+                Require(WindowsRestart.ReadArguments() == "--startup --background", "Quiet switch must immediately update Windows restoration");
                 await window.Web.ExecuteScriptAsync("(()=>{const rows=[...document.querySelectorAll('.settings-row')];rows.find(r=>r.textContent.includes('Запускать вместе')).querySelector('button').click()})()");
                 await WaitAsync(window, "window.synko.diagnostics().state.preferences.startup === false");
                 foreach (var option in new[] { ("Обложки музыки", "automaticArtwork"), ("Превью YouTube", "youTubeThumbnails"), ("Проверять при запуске", "autoCheckUpdates") })
@@ -120,6 +122,7 @@ internal static class SmokeRunner
                     publicationDisabledDuringCheck = true, browserIcons = 16, noLongDashes = true, pasteBridge = true,
                     portalBridge = true, startupIsolatedRegistry = true, artworkAndUpdateToggles = true, customColorSaved = true,
                     quietStartupDefaultAndPersistence = true,
+                    nativeQuietRestartCommand = true,
                     updateCheckStatus
                 }, new JsonSerializerOptions { WriteIndented = true }));
             }

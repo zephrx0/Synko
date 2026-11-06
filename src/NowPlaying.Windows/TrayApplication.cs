@@ -113,7 +113,7 @@ internal sealed class TrayApplication : ApplicationContext
                         _ => s
                     });
                     break;
-                case "startup": StartupRegistration.SetEnabled(command.GetProperty("enabled").GetBoolean()); PushState(); break;
+                case "startup": StartupRegistration.SetEnabled(command.GetProperty("enabled").GetBoolean(), _settings.QuietStartup); PushState(); break;
                 case "applicationId": await ValidateIdAsync(command.GetProperty("value").GetString() ?? ""); break;
                 case "paste":
                     _window.Send(new { type = "clipboard", value = _readClipboard() });
@@ -163,10 +163,12 @@ internal sealed class TrayApplication : ApplicationContext
     private void Save(Func<AppSettings, AppSettings> change)
     {
         var next = change(_settings);
+        var quietChanged = next.QuietStartup != _settings.QuietStartup;
         SettingsStore.Save(next);
         _settings = next;
         _service.Configure(next);
         _toggle.Checked = next.Enabled;
+        if (quietChanged) StartupRegistration.SetEnabled(StartupRegistration.IsEnabled(), next.QuietStartup);
         PushState();
     }
 
