@@ -48,33 +48,39 @@ internal static class StartupChecks
             Check(WindowsRestart.ReadArguments() == "--startup", "Opting out must refresh the Windows restart command immediately");
             StartupRegistration.SetEnabled(false);
 
-            using var signal = new EventWaitHandle(false, EventResetMode.AutoReset);
-            using var context = new TrayApplication(new AppSettings { Enabled = false, AutoCheckUpdates = false, OnboardingDone = false }, signal, background: true);
-            using var timer = new System.Windows.Forms.Timer { Interval = 100 };
-            Exception? loopFailure = null;
-            var shown = false;
-            context.Window.Shown += (_, _) => shown = true;
-            timer.Tick += async (_, _) =>
+            foreach (var background in new[] { true, false })
             {
-                timer.Stop();
-                try
+                using var signal = new EventWaitHandle(false, EventResetMode.AutoReset);
+                using var context = new TrayApplication(new AppSettings { Enabled = false, AutoCheckUpdates = false, OnboardingDone = false }, signal, background);
+                using var timer = new System.Windows.Forms.Timer { Interval = 100 };
+                Exception? loopFailure = null;
+                var shown = false;
+                context.Window.Shown += (_, _) => shown = true;
+                timer.Tick += async (_, _) =>
                 {
-                    Check(!context.Window.Visible && !shown, "Application.Run exposed the background window after the constructor");
-                    await Task.Delay(1000);
-                    Check(!context.Window.Visible && !shown && !context.Window.Ready.IsCompleted, "Background startup must not show or initialise WebView after the message loop starts");
-                    signal.Set();
-                    await context.Window.Ready.WaitAsync(TimeSpan.FromSeconds(30));
-                    Check(context.Window.Visible && shown, "Manual activation must still open the window");
-                    context.Window.Close();
-                    Check(!context.Window.Visible && !context.Window.IsDisposed, "Closing the manually opened window must return to the tray");
-                    await Task.Delay(300);
-                }
-                catch (Exception ex) { loopFailure = ex; }
-                finally { await context.ExitAsync(); }
-            };
-            timer.Start();
-            Application.Run(context);
-            if (loopFailure is not null) throw new InvalidOperationException("Background message loop regression", loopFailure);
+                    timer.Stop();
+                    try
+                    {
+                        if (background)
+                        {
+                            Check(!context.Window.Visible && !shown, "Application.Run exposed the background window after the constructor");
+                            await Task.Delay(1000);
+                            Check(!context.Window.Visible && !shown && !context.Window.Ready.IsCompleted, "Background startup must not show or initialise WebView after the message loop starts");
+                            signal.Set();
+                        }
+                        await context.Window.Ready.WaitAsync(TimeSpan.FromSeconds(30));
+                        Check(context.Window.Visible && shown, "Manual activation must still open the window");
+                        context.Window.Close();
+                        Check(!context.Window.Visible && !context.Window.IsDisposed, "Closing the manually opened window must return to the tray");
+                        await Task.Delay(300);
+                    }
+                    catch (Exception ex) { loopFailure = ex; }
+                    finally { await context.ExitAsync(); }
+                };
+                timer.Start();
+                Application.Run(context);
+                if (loopFailure is not null) throw new InvalidOperationException("Background message loop regression", loopFailure);
+            }
             Console.WriteLine("PASS quiet startup defaults, opt-out persistence, explicit Run/restart commands, native Windows registration and hidden onboarding");
         }
         finally

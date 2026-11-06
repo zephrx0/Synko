@@ -77,7 +77,7 @@ internal sealed class TrayApplication : ApplicationContext
             (_, _) => { if (!_exiting) _window.BeginInvoke(ShowWindow); }, null, Timeout.Infinite, false);
         _service.Start();
         PushState();
-        if (!background) ShowWindow();
+        if (!background) _window.BeginInvoke(ShowWindow);
         _updateTimer.Tick += async (_, _) => { _updateTimer.Stop(); if (!_exiting) await _updates.CheckAsync(); };
         if (settings.AutoCheckUpdates && SettingsStore.OverrideFolder is null) _updateTimer.Start();
     }

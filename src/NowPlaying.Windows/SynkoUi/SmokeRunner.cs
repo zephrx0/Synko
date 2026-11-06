@@ -132,7 +132,8 @@ internal static class SmokeRunner
             }
             finally { await context.ExitAsync(); }
         };
-        window.Show();
+        // Open through the real activation path after the message loop starts.
+        signal.Set();
         Application.Run(context);
         SettingsStore.OverrideFolder = null;
         StartupRegistration.OverrideRegistryPath = null;
