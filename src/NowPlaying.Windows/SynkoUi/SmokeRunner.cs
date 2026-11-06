@@ -1,4 +1,3 @@
-using System.Drawing.Imaging;
 using System.Text.Json;
 using NowPlaying.Core;
 using Microsoft.Web.WebView2.Core;
@@ -155,13 +154,5 @@ internal static class SmokeRunner
         await Task.Delay(500);
         await using (var file = File.Create(Path.Combine(folder, name + ".png")))
             await window.Web.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, file);
-        window.TopMost = true;
-        window.BringToFront();
-        window.Activate();
-        await Task.Delay(150);
-        using var bitmap = new Bitmap(window.Width, window.Height);
-        using (var graphics = Graphics.FromImage(bitmap)) graphics.CopyFromScreen(window.Location, Point.Empty, bitmap.Size);
-        bitmap.Save(Path.Combine(folder, name + "-window.png"), ImageFormat.Png);
-        window.TopMost = false;
     }
 }

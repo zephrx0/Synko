@@ -62,6 +62,12 @@ internal static class StartupChecks
                     Check(!context.Window.Visible && !shown, "Application.Run exposed the background window after the constructor");
                     await Task.Delay(1000);
                     Check(!context.Window.Visible && !shown && !context.Window.Ready.IsCompleted, "Background startup must not show or initialise WebView after the message loop starts");
+                    signal.Set();
+                    await context.Window.Ready.WaitAsync(TimeSpan.FromSeconds(30));
+                    Check(context.Window.Visible && shown, "Manual activation must still open the window");
+                    context.Window.Close();
+                    Check(!context.Window.Visible && !context.Window.IsDisposed, "Closing the manually opened window must return to the tray");
+                    await Task.Delay(300);
                 }
                 catch (Exception ex) { loopFailure = ex; }
                 finally { await context.ExitAsync(); }
