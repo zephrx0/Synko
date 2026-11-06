@@ -14,7 +14,9 @@ internal static class Program
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            var sessions = new MediaMonitor().ReadAsync(timeout.Token).GetAwaiter().GetResult();
+            var monitor = new MediaMonitor();
+            var sessions = monitor.ReadAsync(timeout.Token).GetAwaiter().GetResult();
+            monitor.DisposeAsync().GetAwaiter().GetResult();
             Console.WriteLine($"PASS Windows GSMTC API: {sessions.Count} sessions");
 
             var now = DateTimeOffset.UtcNow;

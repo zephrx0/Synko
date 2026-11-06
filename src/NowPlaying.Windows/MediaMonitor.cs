@@ -5,12 +5,13 @@ using System.Collections.Concurrent;
 
 namespace NowPlaying.Windows;
 
-internal sealed class MediaMonitor(bool probeAddress = false) : IDisposable
+internal sealed class MediaMonitor(bool probeAddress = false) : IDisposable, IAsyncDisposable
 {
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private readonly BrowserWebsiteDetector _websites = new(probeAddress);
     private readonly ConcurrentDictionary<string, string> _thumbnails = new();
     public void Dispose() => _websites.Dispose();
+    public ValueTask DisposeAsync() => _websites.DisposeAsync();
 
     public async Task<IReadOnlyList<MediaSnapshot>> ReadAsync(CancellationToken cancellationToken, bool waitForBrowserAddress = false, bool readYouTubeAddress = true)
     {

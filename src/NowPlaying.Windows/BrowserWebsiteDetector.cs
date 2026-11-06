@@ -8,9 +8,10 @@ namespace NowPlaying.Windows;
 internal sealed class BrowserWebsiteDetector(bool probeAddress = false,
     Func<IReadOnlyList<MediaSnapshot>, List<(string Browser, string Title, IntPtr Handle)>>? windowReader = null,
     Func<IntPtr, string, CancellationToken, Task<BrowserAddressReader.Result>>? addressReader = null,
-    TimeProvider? timeProvider = null) : IDisposable
+    TimeProvider? timeProvider = null) : IDisposable, IAsyncDisposable
 {
     private readonly CancellationTokenSource _stop = new();
+    private bool _disposed;
     private readonly Dictionary<string, (MediaWebsite Website, string? VideoId, DateTimeOffset Expires)> _known = new(StringComparer.Ordinal);
     private Task<(string TrackKey, BrowserAddressReader.Result Match)>? _addressLookup;
     private readonly Dictionary<string, DateTimeOffset> _attempts = new(StringComparer.Ordinal);
@@ -92,7 +93,22 @@ internal sealed class BrowserWebsiteDetector(bool probeAddress = false,
         return (track, result);
     }
 
-    public void Dispose() { _stop.Cancel(); _stop.Dispose(); }
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _stop.Cancel(); _stop.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _stop.Cancel();
+        try { if (_addressLookup is not null) await _addressLookup.WaitAsync(TimeSpan.FromSeconds(6)).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is OperationCanceledException or IOException or TimeoutException or InvalidOperationException) { }
+        finally { _stop.Dispose(); }
+    }
 
     public async Task WaitForPendingAsync(CancellationToken cancellationToken)
     {

@@ -131,7 +131,7 @@ internal sealed class PresenceService : IAsyncDisposable
                 catch (Exception ex) when (ex is IOException or OperationCanceledException or TimeoutException) { }
             }
             await _discord.DisposeAsync();
-            _media.Dispose();
+            await _media.DisposeAsync();
             await _artwork.DisposeAsync();
             _http.Dispose();
         }

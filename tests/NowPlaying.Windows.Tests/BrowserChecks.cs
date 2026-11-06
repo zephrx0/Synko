@@ -38,6 +38,17 @@ internal static class BrowserChecks
             Check(lookedUp.SequenceEqual(["Firefox video", "Helium video"]), "A browser without a readable URL must not monopolise the lookup worker");
             Check(enriched[1].VideoId == "Au6KnAm-Njc", "The other browser must receive its own public video ID");
         }
+        var cancelled = false;
+        var stopping = new BrowserWebsiteDetector(windowReader: _ => [("Firefox", "Firefox video - YouTube - Mozilla Firefox", new IntPtr(1))],
+            addressReader: async (_, _, token) =>
+            {
+                try { await Task.Delay(Timeout.InfiniteTimeSpan, token).ConfigureAwait(false); }
+                finally { cancelled = true; }
+                return new(MediaWebsite.Unknown, null);
+            });
+        stopping.Enrich([firefox]);
+        stopping.DisposeAsync().GetAwaiter().GetResult();
+        Check(cancelled, "Shutdown/update must wait for its browser lookup to stop");
         var previousFolder = SettingsStore.OverrideFolder;
         var diagnosticFolder = Path.Combine(Path.GetTempPath(), "synko-browser-diagnostic-" + Guid.NewGuid().ToString("N"));
         SettingsStore.OverrideFolder = diagnosticFolder;
