@@ -19,3 +19,5 @@ Material Symbols Rounded заменён на официальный локаль
 Браузерные логотипы: Simple Icons (CC0), [Browser Logos](https://github.com/alrra/browser-logos) (MIT, права на товарные знаки у владельцев) и официальный логотип Waterfox (уведомление MPL 2.0). Файлы и уведомления находятся в `Ui/assets`, лицензии включены в архив.
 
 Чтение адресной строки использует системный COM API UI Automation; WPF-зависимость удалена. Самодостаточная сборка сжимается средствами .NET (`EnableCompressionInSingleFile`), без неподдерживаемого trimming WinForms.
+
+Логотип Helium: [официальный SVG](https://github.com/imputnet/helium/blob/main/resources/branding/product_logo.svg); исходная лицензия проекта включена в `Ui/assets/helium-LICENSE.txt` и архив приложения.

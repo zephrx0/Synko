@@ -15,6 +15,8 @@ internal static class ArtworkChecks
         using (var image = Image.FromStream(input)) Check(image.Width == 1, "Native data URL must decode to an actual image");
         Check(NativeArtwork.ToDataUrl([0xff, 0xd8, 0xff, 0xe0])?.StartsWith("data:image/jpeg;base64,", StringComparison.Ordinal) == true, "JPEG MIME must be canonical");
         Check(NativeArtwork.ToDataUrl([0, 1, 2, 3]) is null, "Unknown native data must allow remote fallback");
+        Check(PreviewSnapshot.IsCoverUrl("https://cdn-images.dzcdn.net/images/cover/verified/500x500.jpg"), "Verified fallback artwork must be displayable in Synko too");
+        Check(!PreviewSnapshot.IsCoverUrl("https://cdn-images.dzcdn.net.attacker.invalid/images/cover/test.jpg"), "Fallback artwork must not permit lookalike image hosts");
         var cache = Path.Combine(folder, "cover-recovery-" + Guid.NewGuid().ToString("N"));
         const string url = "https://is1-ssl.mzstatic.com/test.jpg";
         const string native = "data:image/png;base64,iVBORw0KGgo=";

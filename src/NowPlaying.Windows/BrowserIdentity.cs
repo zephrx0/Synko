@@ -7,6 +7,7 @@ internal static class BrowserIdentity
     internal static string FromMetadata(string fallback, string path, string product)
     {
         var identity = path + " " + product;
+        if (identity.Contains("Helium", StringComparison.OrdinalIgnoreCase)) return "Helium";
         if (identity.Contains("Opera GX", StringComparison.OrdinalIgnoreCase) || identity.Contains("operagx", StringComparison.OrdinalIgnoreCase)) return "Opera GX";
         if (identity.Contains("Yandex", StringComparison.OrdinalIgnoreCase)) return "Яндекс Браузер";
         return fallback;
@@ -14,7 +15,7 @@ internal static class BrowserIdentity
 
     internal static string ForProcess(Process process, string fallback)
     {
-        if (fallback is not ("Браузер" or "Opera")) return fallback;
+        if (fallback is not ("Браузер" or "Opera" or "Google Chrome")) return fallback;
         try
         {
             var path = process.MainModule?.FileName;

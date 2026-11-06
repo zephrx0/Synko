@@ -10,7 +10,8 @@ internal static class BrowserAddressReader
     private static readonly string[] AddressBarNames =
     [
         "Address and search bar", "Адресная строка и строка поиска", "Адресная строка",
-        "Search or enter address", "Поиск или ввод адреса", "Search with Google or enter address"
+        "Search or enter address", "Поиск или ввод адреса", "Search with Google or enter address",
+        "Search or enter URL", "Search or type URL", "Search or enter web address", "Введите адрес или поисковый запрос"
     ];
 
     public static Result Read(IntPtr window, string mediaTitle, bool probeAddress = false)
@@ -62,7 +63,7 @@ internal static class BrowserAddressReader
                 return new(MediaWebsite.Unknown, null);
             }
             IUIAutomationCondition? names = null;
-            foreach (var (property, value) in AddressBarNames.Select(name => (30005, name)).Concat([(30011, "urlbar-input"), (30011, "urlbar")]))
+            foreach (var (property, value) in AddressBarNames.Select(name => (30005, name)).Concat([(30011, "urlbar-input"), (30011, "urlbar"), (30011, "omnibox")]))
             {
                 automation.CreatePropertyConditionEx(property, value, 1, out var condition); references.Add(condition);
                 if (names is null) names = condition;
@@ -71,7 +72,31 @@ internal static class BrowserAddressReader
             automation.CreatePropertyCondition(30003, 50004, out var edit); references.Add(edit);
             automation.CreateAndCondition(edit, names!, out var addressCondition); references.Add(addressCondition);
             root.FindFirst(4, addressCondition, out var address);
-            if (address is null) return new(MediaWebsite.YouTube, null);
+            if (address is null)
+            {
+                // Chromium forks/locales can rename the omnibox. Restrict the
+                // fallback to toolbar edits, never arbitrary page input fields.
+                automation.CreatePropertyCondition(30003, 50021, out var toolbarCondition); references.Add(toolbarCondition);
+                root.FindAll(4, toolbarCondition, out var toolbars); references.Add(toolbars);
+                toolbars.GetLength(out var count);
+                for (var i = 0; i < Math.Min(count, 32); i++)
+                {
+                    toolbars.GetElement(i, out var toolbar); references.Add(toolbar);
+                    toolbar.FindAll(4, edit, out var edits); references.Add(edits);
+                    edits.GetLength(out var editCount);
+                    for (var j = 0; j < Math.Min(editCount, 16); j++)
+                    {
+                        edits.GetElement(j, out var candidate); references.Add(candidate);
+                        candidate.GetCurrentPropertyValue(30008, out var isFocused);
+                        if (isFocused is true) continue;
+                        candidate.GetCurrentPropertyValue(30045, out var candidateValue);
+                        if (candidateValue is string url && YouTubeVideo.IdFromUrl(url) is { } candidateId
+                            && BrowserSiteClassifier.FromWindowTitle(mediaTitle, BrowserWebsiteDetector.WindowTitle(window)) == MediaWebsite.YouTube)
+                            return new(MediaWebsite.YouTube, candidateId);
+                    }
+                }
+                return new(MediaWebsite.YouTube, null);
+            }
             references.Add(address);
             address.GetCurrentPropertyValue(30008, out var focused);
             if (focused is true) return new(MediaWebsite.YouTube, null);

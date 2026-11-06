@@ -55,8 +55,9 @@ internal static class Program
             if (includeArtwork && selected?.Source is NowPlaying.Core.MediaSource.AppleMusic or NowPlaying.Core.MediaSource.Spotify)
             {
                 using var http = new HttpClient();
-                artwork = await new NowPlaying.Core.AppleArtworkResolver(http,
-                    cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")).ResolveAsync(selected, timeout.Token);
+                artwork = await new NowPlaying.Core.MusicArtworkResolver(
+                    new NowPlaying.Core.AppleArtworkResolver(http, cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")),
+                    new NowPlaying.Core.DeezerArtworkResolver(http, Path.Combine(SettingsStore.Folder, "artwork", "deezer.json"))).ResolveAsync(selected, timeout.Token);
             }
             var catalogMilliseconds = elapsed.Elapsed.TotalMilliseconds - mediaMilliseconds;
             string? downloadedCover = null;

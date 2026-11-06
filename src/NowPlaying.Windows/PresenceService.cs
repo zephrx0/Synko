@@ -19,7 +19,9 @@ internal sealed class PresenceService : IAsyncDisposable
     public PresenceService(AppSettings settings)
     {
         _settings = settings;
-        _artwork = new(new AppleArtworkResolver(_http, cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")));
+        _artwork = new(new MusicArtworkResolver(
+            new AppleArtworkResolver(_http, cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")),
+            new DeezerArtworkResolver(_http, Path.Combine(SettingsStore.Folder, "artwork", "deezer.json"))), settleDelay: TimeSpan.FromMilliseconds(350));
     }
     public void Configure(AppSettings settings) => Volatile.Write(ref _settings, settings);
     public void Start() => _loop ??= Task.Run(RunAsync);
@@ -48,7 +50,7 @@ internal sealed class PresenceService : IAsyncDisposable
                 previousTrack = selected?.TrackKey;
                 var artwork = _artwork.Update(selected, settings.AutomaticArtwork);
                 var desired = settings.Enabled && selected is not null && mediaError is null
-                    ? PresenceBuilder.Build(selected, settings.ImageKey, artwork?.Match) : null;
+                    ? PresenceBuilder.Build(settings.YouTubeThumbnails ? selected : selected with { VideoId = null }, settings.ImageKey, artwork?.Match) : null;
                 var artworkStatus = selected?.Website == MediaWebsite.YouTube && settings.YouTubeThumbnails
                     ? selected.VideoId is not null ? "Превью текущего видео YouTube" : "Для превью откройте вкладку с воспроизводимым видео YouTube"
                     : artwork?.Status;

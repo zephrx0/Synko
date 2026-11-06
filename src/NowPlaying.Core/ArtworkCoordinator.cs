@@ -2,7 +2,7 @@ namespace NowPlaying.Core;
 
 // Polling media and clearing Discord must remain responsive while the network
 // lookup runs. Results from a previous track are never attached to a new one.
-public sealed class ArtworkCoordinator(IArtworkResolver resolver, TimeProvider? timeProvider = null) : IAsyncDisposable
+public sealed class ArtworkCoordinator(IArtworkResolver resolver, TimeProvider? timeProvider = null, TimeSpan? settleDelay = null) : IAsyncDisposable
 {
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
     private CancellationTokenSource? _lookupCancellation;
@@ -32,7 +32,11 @@ public sealed class ArtworkCoordinator(IArtworkResolver resolver, TimeProvider? 
 
     private async Task<ArtworkResult> LookupAsync(MediaSnapshot media, CancellationToken cancellationToken)
     {
-        try { return await resolver.ResolveAsync(media, cancellationToken); }
+        try
+        {
+            if (settleDelay is { } delay && delay > TimeSpan.Zero) await Task.Delay(delay, _time, cancellationToken);
+            return await resolver.ResolveAsync(media, cancellationToken);
+        }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         { return new(null, "Поиск обложки отменён", _time.GetUtcNow()); }
         catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException or ArgumentException)

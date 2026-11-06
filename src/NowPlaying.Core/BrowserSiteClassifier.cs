@@ -6,7 +6,7 @@ public static class BrowserSiteClassifier
 {
     private static readonly string[] Separators = [" - ", " – ", " — "];
     private static readonly string[] BrowserNames =
-        ["Google Chrome", "Microsoft Edge", "Mozilla Firefox", "Firefox", "Brave", "Opera", "Opera GX", "Vivaldi", "Яндекс Браузер", "Yandex Browser", "Arc"];
+        ["Google Chrome", "Microsoft Edge", "Mozilla Firefox", "Firefox", "Brave", "Opera", "Opera GX", "Vivaldi", "Яндекс Браузер", "Yandex Browser", "Arc", "Helium", "Chromium", "Thorium", "LibreWolf", "Waterfox", "Floorp", "Zen"];
 
     public static MediaWebsite FromWindowTitle(string mediaTitle, string windowTitle)
     {

@@ -35,7 +35,7 @@ internal static class SmokeRunner
                 Require(Application.OpenForms.Cast<Form>().All(f => f is SynkoWindow), "Unexpected window was created");
                 Require(await Script(window, "document.querySelectorAll('button').length === 2"), "Home has extra buttons");
                 Require(await Script(window, "!document.querySelector('.source-row').textContent.includes('—') && !document.querySelector('.source-row').textContent.includes('·')"), "Source labels contain unwanted punctuation");
-                await window.Web.ExecuteScriptAsync("(async()=>{const {symbol}=await import('./components/interaction.js');const {browserIcon}=await import('./brand.js');const box=document.createElement('div');box.hidden=true;document.body.append(box);for(const name of ['Google Chrome','Microsoft Edge','Firefox','Brave','Vivaldi','Opera','Opera GX','Arc','Яндекс Браузер','Chromium','Thorium','LibreWolf','Waterfox','Floorp','Zen'])box.append(symbol(browserIcon(name)));try{await Promise.all([...box.querySelectorAll('img')].map(image=>image.decode()));window.browserIconsVerified=box.querySelectorAll('img').length===15&&[...box.querySelectorAll('img')].every(image=>image.naturalWidth>0)}catch{window.browserIconsVerified=false}finally{box.remove()}})()");
+                await window.Web.ExecuteScriptAsync("(async()=>{const {symbol}=await import('./components/interaction.js');const {browserIcon}=await import('./brand.js');const box=document.createElement('div');box.hidden=true;document.body.append(box);for(const name of ['Google Chrome','Microsoft Edge','Firefox','Brave','Vivaldi','Opera','Opera GX','Arc','Яндекс Браузер','Chromium','Thorium','LibreWolf','Waterfox','Floorp','Zen','Helium'])box.append(symbol(browserIcon(name)));try{await Promise.all([...box.querySelectorAll('img')].map(image=>image.decode()));window.browserIconsVerified=box.querySelectorAll('img').length===16&&[...box.querySelectorAll('img')].every(image=>image.naturalWidth>0)}catch{window.browserIconsVerified=false}finally{box.remove()}})()");
                 await WaitAsync(window, "window.browserIconsVerified === true");
                 await window.Web.ExecuteScriptAsync("document.querySelector('button[aria-label=\"Настройки\"]').click()");
                 await WaitAsync(window, "window.synko.diagnostics().view === 'settings' && document.querySelector('.settings-section input') !== null");
@@ -117,7 +117,7 @@ internal static class SmokeRunner
                     themeSaved = true, artworkKeySaved = true, invalidIdPreservesSettings = true, spotifySourceSaved = true,
                     onboardingOpensInPlace = true, allFiveWizardSteps = true, sourceSaved = true, wizardCompletionSaved = true,
                     hideAndReopen = true, userSettingsUntouched = true,
-                    publicationDisabledDuringCheck = true, browserIcons = 15, noLongDashes = true, pasteBridge = true,
+                    publicationDisabledDuringCheck = true, browserIcons = 16, noLongDashes = true, pasteBridge = true,
                     portalBridge = true, startupIsolatedRegistry = true, artworkAndUpdateToggles = true, customColorSaved = true,
                     quietStartupDefaultAndPersistence = true,
                     updateCheckStatus

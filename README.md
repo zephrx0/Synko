@@ -16,9 +16,9 @@
 - Режим «Авто», отдельный выбор Apple Music, Spotify или браузера, поддержка всех медиаплееров Windows
 - Статус «Слушает Spotify» с названием трека, исполнителем, временем и кнопкой поиска в Spotify
 - Распознавание YouTube, превью текущего видео, кнопка перехода к ролику в Discord
-- Обложки музыки из каталога Apple и картинки из системной медиапанели
+- Обложки музыки из каталогов Apple и Deezer, картинки из системной медиапанели
 - Снятие активности на паузе, при остановке и выключении публикации
-- Иконки Chrome, Edge, Firefox, Brave, Opera / GX, Vivaldi, Arc, Яндекс, Chromium, Thorium, LibreWolf, Waterfox, Floorp и Zen
+- Иконки Chrome, Edge, Firefox, Brave, Opera / GX, Vivaldi, Arc, Яндекс, Chromium, Thorium, LibreWolf, Waterfox, Floorp, Zen и Helium
 - Тема Windows или ручной выбор, цвет из обложки, системного акцента или образца
 - Волнистый прогресс, плавные переходы, учёт уменьшенной анимации Windows
 - Работа в трее, автозапуск и встроенное обновление из GitHub Releases
@@ -80,7 +80,7 @@ Synko shows Apple Music, Spotify and browser playback in your Discord profile us
 - Automatic source selection, Apple Music, Spotify, browser-only and all-player modes
 - Listening to Spotify with track details, timeline and a Spotify search button
 - YouTube detection, video thumbnails and a link to the current video
-- Music artwork from the Apple catalogue and native Windows media thumbnails
+- Music artwork from the Apple and Deezer catalogues and native Windows media thumbnails
 - Activity cleared on pause or when sharing is disabled
 - Icons for 15 recognised browser identities
 - System, light and dark themes, artwork colours and custom accents

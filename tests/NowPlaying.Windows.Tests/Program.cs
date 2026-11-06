@@ -40,6 +40,7 @@ internal static class Program
             ArtworkChecks.RunAsync(Path.GetDirectoryName(path)!).GetAwaiter().GetResult();
             SpotifyChecks.Run();
             StartupChecks.Run();
+            BrowserChecks.Run();
             return 0;
         }
         catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }

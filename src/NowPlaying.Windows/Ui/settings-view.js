@@ -93,7 +93,7 @@ export class SettingsView {
     sources.append(this.source);
     this.allPlayers = switchRow(sources, "Все медиаплееры Windows", p.sourceMode === 3, enabled => this.change("sourceMode", enabled ? 3 : 0));
     const covers = section(root, "Обложки", "album");
-    this.apple = switchRow(covers, "Обложки музыки", p.automaticArtwork ?? true, value => this.change("automaticArtwork", value), "Для Apple Music и Spotify картинка берётся из медиапанели Windows. Чтобы найти публичную обложку для Discord, название трека, исполнитель и альбом отправляются в каталог Apple");
+    this.apple = switchRow(covers, "Обложки музыки", p.automaticArtwork ?? true, value => this.change("automaticArtwork", value), "Для Apple Music и Spotify картинка берётся из медиапанели Windows. Для публичной обложки Discord название трека, исполнитель и альбом отправляются в каталоги Apple и Deezer");
     this.youtube = switchRow(covers, "Превью YouTube", p.youTubeThumbnails ?? true, value => this.change("youTubeThumbnails", value), "Ссылка на ролик берётся из адресной строки YouTube и передаётся в Discord как превью. История браузера не читается");
     const appearance = section(root, "Внешний вид", "palette"); this.appearance = new AppearanceControls(appearance, p, (key, value) => this.change(key, value));
     const system = section(root, "Система", "desktop_windows");

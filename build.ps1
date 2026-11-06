@@ -29,6 +29,7 @@ New-Item -ItemType Directory -Force -Path $licenses | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'src\NowPlaying.Windows\Ui\fonts\RobotoFlex-OFL.txt'), (Join-Path $PSScriptRoot 'src\NowPlaying.Windows\Ui\fonts\MaterialSymbols-LICENSE.txt'), (Join-Path $PSScriptRoot 'src\NowPlaying.Windows\Ui\assets\simple-icons-LICENSE.md') -Destination $licenses
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'src\NowPlaying.Windows\Ui\vendor\material-color-utilities\LICENSE') -Destination (Join-Path $licenses 'MaterialColorUtilities-LICENSE.txt')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'src\NowPlaying.Windows\Ui\assets\browser-logos-LICENSE.txt'), (Join-Path $PSScriptRoot 'src\NowPlaying.Windows\Ui\assets\waterfox-LICENSE.txt') -Destination $licenses
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'src\NowPlaying.Windows\Ui\assets\helium-LICENSE.txt') -Destination $licenses
 $documentation = Join-Path $destination 'docs'
 New-Item -ItemType Directory -Force -Path $documentation | Out-Null
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs\images') -Destination $documentation -Recurse -Force

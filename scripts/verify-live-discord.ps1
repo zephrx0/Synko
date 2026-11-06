@@ -57,6 +57,7 @@ try {
     if ($ack.data.name -ne $activity.name -or $ack.data.type -ne $activity.type) { throw 'Discord did not apply the requested activity name and type.' }
     $image = [string]$activity.assets.large_image
     $publicArtwork = $image -like 'https://i.ytimg.com/*' -or $image -match '^https://[^/]+\.mzstatic\.com/' `
+        -or $image -match '^https://(?:cdn-images|e-cdn-images)\.dzcdn\.net/images/cover/' `
         -or $image -like 'https://open.spotifycdn.com/cdn/images/*' `
         -or $image -eq 'https://raw.githubusercontent.com/zephrx0/Synko/main/docs/images/spotify.png'
     if ($publicArtwork) {

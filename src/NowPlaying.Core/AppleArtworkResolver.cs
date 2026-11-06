@@ -155,6 +155,10 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
     }
 
     public static ArtworkMatch? MatchResults(MediaSnapshot raw, JsonElement response)
+        => MatchResults(raw, response, ArtworkUrl, StoreUrl);
+
+    internal static ArtworkMatch? MatchResults(MediaSnapshot raw, JsonElement response,
+        Func<string, string?> artworkUrl, Func<string, string?> storeUrl)
     {
         var media = MediaMetadata.Normalize(raw);
         if (response.ValueKind != JsonValueKind.Object || !response.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array) return null;
@@ -179,13 +183,13 @@ public sealed class AppleArtworkResolver(HttpClient http, TimeProvider? timeProv
             if (sameTitle && !sameAlbum && media.Duration > TimeSpan.Zero
                 && candidate.TryGetProperty("trackTimeMillis", out var duration) && duration.TryGetDouble(out var milliseconds)
                 && Math.Abs(milliseconds / 1000 - media.Duration.TotalSeconds) > 8) continue;
-            var imageUrl = ArtworkUrl(String(candidate, "artworkUrl100"));
+            var imageUrl = artworkUrl(String(candidate, "artworkUrl100"));
             if (imageUrl is null) continue;
             var score = (sameTitle ? 4 : 0) + (sameAlbum ? 8 : 0) + (candidateArtist == artist ? 2 : 0);
             if (score <= bestScore) continue;
             bestScore = score;
             var link = String(candidate, sameTitle ? "trackViewUrl" : "collectionViewUrl");
-            best = new(imageUrl, candidateAlbum, StoreUrl(link));
+            best = new(imageUrl, candidateAlbum, storeUrl(link));
         }
         return best;
     }

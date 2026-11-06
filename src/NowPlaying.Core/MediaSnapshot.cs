@@ -43,6 +43,11 @@ public static class SourceClassifier
             || appId.Contains("itunes", StringComparison.OrdinalIgnoreCase))
             return (MediaSource.AppleMusic, "Apple Music");
 
+        if (appId.StartsWith("Helium.", StringComparison.OrdinalIgnoreCase)
+            || appId.Equals("Helium", StringComparison.OrdinalIgnoreCase)
+            || appId.Replace('\\', '/').Split('/')[^1].Equals("helium.exe", StringComparison.OrdinalIgnoreCase))
+            return (MediaSource.Browser, "Helium");
+
         (string Id, string Name)[] browsers =
         [
             ("msedge", "Microsoft Edge"), ("chrome", "Google Chrome"),

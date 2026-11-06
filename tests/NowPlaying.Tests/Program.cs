@@ -6,6 +6,7 @@ using NowPlaying.Core;
 
 var passed = 0;
 var failed = 0;
+await Run("Artwork recovery and Helium regression coverage", ArtworkRecoveryChecks.RunAsync);
 await Run("Spotify desktop and Store IDs are recognised without confusing a browser", () =>
 {
     foreach (var id in new[] { "Spotify.exe", "SPOTIFY.EXE", @"C:\Users\Test\AppData\Roaming\Spotify\Spotify.exe", "SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify" })

@@ -19,7 +19,8 @@ internal static class PreviewSnapshot
         using var http = new HttpClient();
         string? imageUrl = null;
         if (media?.Source is MediaSource.AppleMusic or MediaSource.Spotify && settings.AutomaticArtwork)
-            imageUrl = (await new AppleArtworkResolver(http, cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json"))
+            imageUrl = (await new MusicArtworkResolver(new AppleArtworkResolver(http, cacheFile: Path.Combine(SettingsStore.Folder, "artwork", "catalog.json")),
+                new DeezerArtworkResolver(http, Path.Combine(SettingsStore.Folder, "artwork", "deezer.json")))
                 .ResolveAsync(media, cancellationToken)).Match?.ImageUrl;
         else if (media?.Website == MediaWebsite.YouTube && settings.YouTubeThumbnails)
             imageUrl = YouTubeVideo.ThumbnailUrl(media.VideoId);
@@ -59,5 +60,5 @@ internal static class PreviewSnapshot
     }
 
     internal static bool IsCoverUrl(string? value) => Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == "https"
-        && (uri.Host == "i.ytimg.com" || uri.Host.EndsWith(".mzstatic.com", StringComparison.OrdinalIgnoreCase));
+        && (uri.Host == "i.ytimg.com" || uri.Host.EndsWith(".mzstatic.com", StringComparison.OrdinalIgnoreCase) || DeezerArtworkResolver.CoverUrl(value!) is not null);
 }
