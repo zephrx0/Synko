@@ -9,13 +9,14 @@ namespace NowPlaying.Core;
 public sealed class DiscordRpcClient : IAsyncDisposable
 {
     private readonly SemaphoreSlim _writeLock = new(1, 1);
-    private readonly ConcurrentDictionary<string, TaskCompletionSource> _pending = new();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<JsonElement>> _pending = new();
     private NamedPipeClientStream? _pipe;
     private CancellationTokenSource? _readerCancellation;
     private Task? _reader;
     private TaskCompletionSource? _ready;
     private string? _applicationId;
     public bool IsConnected => _pipe?.IsConnected == true && _ready?.Task.IsCompletedSuccessfully == true && _reader?.IsCompleted == false;
+    public bool? LastImageAcknowledged { get; private set; }
 
     public static bool IsValidApplicationId(string id)
         => id.Length is >= 17 and <= 20 && id.All(char.IsAsciiDigit) && ulong.TryParse(id, out var number) && number > 0;
@@ -60,7 +61,7 @@ public sealed class DiscordRpcClient : IAsyncDisposable
     {
         if (!IsConnected) throw new IOException("Нет соединения с Discord.");
         var nonce = Guid.NewGuid().ToString("N");
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completion = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[nonce] = completion;
         try
         {
@@ -70,9 +71,20 @@ public sealed class DiscordRpcClient : IAsyncDisposable
                 args = new { pid = Environment.ProcessId, activity = presence?.ToActivity() },
                 nonce
             }, cancellationToken);
-            await completion.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            var response = await completion.Task.WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            LastImageAcknowledged = InspectImageAcknowledgement(presence, response);
         }
         finally { _pending.TryRemove(nonce, out _); }
+    }
+
+    internal static bool? InspectImageAcknowledgement(Presence? presence, JsonElement response)
+    {
+        if (string.IsNullOrWhiteSpace(presence?.ImageKey)) return null;
+        if (!response.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return null;
+        if (!data.TryGetProperty("assets", out var assets))
+            return data.TryGetProperty("name", out _) || data.TryGetProperty("type", out _) ? false : null;
+        return assets.ValueKind == JsonValueKind.Object && assets.TryGetProperty("large_image", out var image)
+            && image.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(image.GetString());
     }
 
     private async Task SendJsonAsync(int opcode, object payload, CancellationToken cancellationToken)
@@ -113,7 +125,7 @@ public sealed class DiscordRpcClient : IAsyncDisposable
                     else if (_ready?.Task.IsCompleted == false) _ready.TrySetException(exception);
                     else throw exception;
                 }
-                else if (nonce is not null && _pending.TryRemove(nonce, out var completed)) completed.TrySetResult();
+                else if (nonce is not null && _pending.TryRemove(nonce, out var completed)) completed.TrySetResult(root.Clone());
             }
         }
         catch (Exception ex) when (ex is IOException or OperationCanceledException or ObjectDisposedException or JsonException or InvalidOperationException)
@@ -139,6 +151,7 @@ public sealed class DiscordRpcClient : IAsyncDisposable
         _pipe = null;
         _ready = null;
         _applicationId = null;
+        LastImageAcknowledged = null;
     }
 
     public async ValueTask DisposeAsync()

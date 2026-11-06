@@ -34,6 +34,8 @@ internal sealed class PresenceService : IAsyncDisposable
         var nextConnect = DateTimeOffset.MinValue;
         var lastPublish = DateTimeOffset.MinValue;
         var status = "Ожидание Discord";
+        var imageRetry = new PublicImageRetry();
+        var diagnostics = new PlaybackDiagnostics();
         string? activeId = null;
         try
         {
@@ -70,6 +72,7 @@ internal sealed class PresenceService : IAsyncDisposable
                         hasPublished = false;
                         published = null;
                         nextConnect = DateTimeOffset.MinValue;
+                        imageRetry.Reset();
                     }
                     if (!DiscordRpcClient.IsValidApplicationId(settings.ApplicationId))
                         status = "Нужен Discord Application ID — укажите его ниже";
@@ -82,15 +85,18 @@ internal sealed class PresenceService : IAsyncDisposable
                             await _discord.ConnectAsync(settings.ApplicationId, _stop.Token);
                             hasPublished = false;
                             published = null;
+                            imageRetry.Reset();
                         }
                         if (_discord.IsConnected)
                         {
                             // Send track changes at most once per 5 seconds. Clear
                             // immediately on pause/disable. Timestamp drift >3s
                             // indicates a seek and requires a new presence.
-                            if (Changed(published, desired) && (desired is null || DateTimeOffset.UtcNow - lastPublish >= TimeSpan.FromSeconds(5)))
+                            if ((Changed(published, desired) || imageRetry.Due(desired, DateTimeOffset.UtcNow))
+                                && (desired is null || DateTimeOffset.UtcNow - lastPublish >= TimeSpan.FromSeconds(5)))
                             {
                                 await _discord.SetActivityAsync(desired, _stop.Token);
+                                imageRetry.Observe(desired, _discord.LastImageAcknowledged, DateTimeOffset.UtcNow);
                                 published = desired;
                                 hasPublished = desired is not null;
                                 lastPublish = DateTimeOffset.UtcNow;
@@ -111,6 +117,7 @@ internal sealed class PresenceService : IAsyncDisposable
                 }
                 if (status != previousStatus || previouslyPublished != (hasPublished && _discord.IsConnected))
                     Updated?.Invoke(new(sessions, selected, status, mediaError, hasPublished && _discord.IsConnected, artworkStatus, artworkUrl));
+                diagnostics.Write(selected, desired, published, _discord.IsConnected, _discord.LastImageAcknowledged);
                 await Task.Delay(TimeSpan.FromMilliseconds(750), _stop.Token);
             }
         }
@@ -124,6 +131,7 @@ internal sealed class PresenceService : IAsyncDisposable
                 catch (Exception ex) when (ex is IOException or OperationCanceledException or TimeoutException) { }
             }
             await _discord.DisposeAsync();
+            _media.Dispose();
             await _artwork.DisposeAsync();
             _http.Dispose();
         }

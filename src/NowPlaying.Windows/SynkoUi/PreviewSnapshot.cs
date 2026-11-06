@@ -13,7 +13,8 @@ internal static class PreviewSnapshot
     public static async Task<UiSnapshot> CaptureAsync(CancellationToken cancellationToken)
     {
         var settings = SettingsStore.Load();
-        var sessions = await new MediaMonitor().ReadAsync(cancellationToken, waitForBrowserAddress: true, readYouTubeAddress: settings.YouTubeThumbnails);
+        using var monitor = new MediaMonitor();
+        var sessions = await monitor.ReadAsync(cancellationToken, waitForBrowserAddress: true, readYouTubeAddress: settings.YouTubeThumbnails);
         var media = MediaSelector.Select(sessions, settings.SourceMode, null)
             ?? sessions.FirstOrDefault(s => MediaSelector.Allows(s.Source, settings.SourceMode) && !string.IsNullOrWhiteSpace(s.Title));
         using var http = new HttpClient();

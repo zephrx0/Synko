@@ -36,6 +36,8 @@ internal static class SmokeRunner
                 Require(await Script(window, "!document.querySelector('.source-row').textContent.includes('—') && !document.querySelector('.source-row').textContent.includes('·')"), "Source labels contain unwanted punctuation");
                 await window.Web.ExecuteScriptAsync("(async()=>{const {symbol}=await import('./components/interaction.js');const {browserIcon}=await import('./brand.js');const box=document.createElement('div');box.hidden=true;document.body.append(box);for(const name of ['Google Chrome','Microsoft Edge','Firefox','Brave','Vivaldi','Opera','Opera GX','Arc','Яндекс Браузер','Chromium','Thorium','LibreWolf','Waterfox','Floorp','Zen','Helium'])box.append(symbol(browserIcon(name)));try{await Promise.all([...box.querySelectorAll('img')].map(image=>image.decode()));window.browserIconsVerified=box.querySelectorAll('img').length===16&&[...box.querySelectorAll('img')].every(image=>image.naturalWidth>0)}catch{window.browserIconsVerified=false}finally{box.remove()}})()");
                 await WaitAsync(window, "window.browserIconsVerified === true");
+                await window.Web.ExecuteScriptAsync("(async()=>{const image=new Image();image.src='./assets/helium.svg';await image.decode();const box=document.createElement('span');box.className='browser-glyph';box.style.position='absolute';box.style.left='-100px';box.append(image);document.body.append(box);const root=document.documentElement,old=root.dataset.dark;let valid=true;try{for(const dark of ['false','true']){root.dataset.dark=dark;const canvas=document.createElement('canvas');canvas.width=canvas.height=18;const context=canvas.getContext('2d');context.filter=getComputedStyle(image).filter;context.drawImage(image,0,0,18,18);const pixels=context.getImageData(0,0,18,18).data;let min=255,max=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i+3]>240){const value=(pixels[i]+pixels[i+1]+pixels[i+2])/3;min=Math.min(min,value);max=Math.max(max,value)}valid&&=max-min>60}}finally{box.remove();if(old===undefined)delete root.dataset.dark;else root.dataset.dark=old}window.heliumLogoVerified=valid})()");
+                await WaitAsync(window, "window.heliumLogoVerified === true");
                 await window.Web.ExecuteScriptAsync("document.querySelector('button[aria-label=\"Настройки\"]').click()");
                 await WaitAsync(window, "window.synko.diagnostics().view === 'settings' && document.querySelector('.settings-section input') !== null");
                 await CaptureAsync(window, folder, "production-settings");
@@ -122,6 +124,7 @@ internal static class SmokeRunner
                     portalBridge = true, startupIsolatedRegistry = true, artworkAndUpdateToggles = true, customColorSaved = true,
                     quietStartupDefaultAndPersistence = true,
                     nativeQuietRestartCommand = true,
+                    heliumLogoContrast = true,
                     updateCheckStatus
                 }, new JsonSerializerOptions { WriteIndented = true }));
             }

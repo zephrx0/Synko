@@ -192,6 +192,39 @@ await Run("Discord handshake, PING/PONG, activity ACK and clear", async () =>
         Check(!client.IsConnected, "Disconnected");
     });
 });
+await Run("Discord image omission is detected and retried without changing the video", async () =>
+{
+    var video = Media("firefox.exe", MediaSource.Browser) with { Website = MediaWebsite.YouTube, VideoId = "Au6KnAm-Njc" };
+    var presence = PresenceBuilder.Build(video, null);
+    await WithPipe(async (server, token) =>
+    {
+        await Handshake(server, token);
+        for (var i = 0; i < 2; i++)
+        {
+            using var request = JsonDocument.Parse((await RpcFrame.ReadAsync(server, token)).Payload);
+            var data = new Dictionary<string, object> { ["name"] = "видео на YouTube", ["type"] = 3 };
+            if (i == 1) data["assets"] = new { large_image = "mp:external/verified/https/i.ytimg.com/vi/Au6KnAm-Njc/hqdefault.jpg" };
+            await RpcFrame.WriteJsonAsync(server, 1, new { cmd = "SET_ACTIVITY", nonce = request.RootElement.GetProperty("nonce").GetString(), data }, token);
+        }
+        Equal(0, await server.ReadAsync(new byte[1], token));
+    }, async (client, prefix, token) =>
+    {
+        await client.ConnectAsync("123456789012345678", token, prefix);
+        await client.SetActivityAsync(presence, token);
+        Equal<bool?>(false, client.LastImageAcknowledged);
+        var now = DateTimeOffset.UtcNow;
+        var retry = new PublicImageRetry(); retry.Observe(presence, client.LastImageAcknowledged, now);
+        Check(!retry.Due(presence, now.AddSeconds(9)) && retry.Due(presence, now.AddSeconds(11)), "Retry must be rate-limited and not require a media change");
+        Check(!retry.Due(presence with { ImageKey = "https://i.ytimg.com/vi/OtherVid123/hqdefault.jpg" }, now.AddMinutes(1)), "Do not retry the old video's artwork on a new video");
+        await client.SetActivityAsync(presence, token);
+        Equal<bool?>(true, client.LastImageAcknowledged);
+        retry.Observe(presence, client.LastImageAcknowledged, now);
+        Check(!retry.Due(presence, now.AddHours(1)), "Accepted images must not be resent forever");
+        retry.Observe(presence, false, now); retry.Observe(null, null, now);
+        Check(!retry.Due(presence, now.AddHours(1)), "Paused playback clears any image retry");
+        await client.DisconnectAsync();
+    });
+});
 await Run("Discord ERROR is surfaced instead of claiming success", async () =>
 {
     await WithPipe(async (server, token) =>

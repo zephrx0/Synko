@@ -8,6 +8,7 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length == 2 && args[0] == "--read-browser-address") return BrowserAddressProbe.Run(args[1]);
         if (args.Length == 2 && args[0] is "--diagnose" or "--diagnose-artwork" or "--diagnose-address")
             return DiagnoseAsync(args[1], args[0] == "--diagnose-artwork", args[0] == "--diagnose-address").GetAwaiter().GetResult();
         if (args.Length == 2 && args[0] == "--apply-update") return Updates.UpdateInstaller.Run(args[1]);
@@ -48,7 +49,8 @@ internal static class Program
             var elapsed = System.Diagnostics.Stopwatch.StartNew();
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(includeArtwork ? 45 : 10));
             var settings = SettingsStore.Load();
-            var sessions = await new MediaMonitor(probeAddress).ReadAsync(timeout.Token, waitForBrowserAddress: true, readYouTubeAddress: settings.YouTubeThumbnails);
+            using var monitor = new MediaMonitor(probeAddress);
+            var sessions = await monitor.ReadAsync(timeout.Token, waitForBrowserAddress: true, readYouTubeAddress: settings.YouTubeThumbnails);
             var mediaMilliseconds = elapsed.Elapsed.TotalMilliseconds;
             NowPlaying.Core.ArtworkResult? artwork = null;
             var selected = NowPlaying.Core.MediaSelector.Select(sessions, settings.SourceMode, null);
@@ -71,7 +73,7 @@ internal static class Program
                 selected.Source is NowPlaying.Core.MediaSource.AppleMusic or NowPlaying.Core.MediaSource.Spotify ? artwork?.Match : null).ToActivity();
             var automatic = NowPlaying.Core.MediaSelector.Select(sessions, NowPlaying.Core.SourceMode.Automatic, null);
             await File.WriteAllTextAsync(path, JsonSerializer.Serialize(new { success = true, sessions, artwork, activity,
-                sourceMode = settings.SourceMode, automaticTitle = automatic?.Title, browser = BrowserAddressReader.LastDiagnostic,
+                sourceMode = settings.SourceMode, automaticTitle = automatic?.Title, browser = BrowserAddressProbe.LastDiagnostic ?? BrowserAddressReader.LastDiagnostic,
                 timing = new { mediaMilliseconds, catalogMilliseconds, totalMilliseconds = elapsed.Elapsed.TotalMilliseconds, downloadedCover = downloadedCover is not null },
                 thumbnails = sessions.Select(s => new { s.SourceName, available = s.ThumbnailData is not null }) }, new JsonSerializerOptions { WriteIndented = true }));
             return 0;

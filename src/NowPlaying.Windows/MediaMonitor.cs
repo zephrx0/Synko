@@ -5,11 +5,12 @@ using System.Collections.Concurrent;
 
 namespace NowPlaying.Windows;
 
-internal sealed class MediaMonitor(bool probeAddress = false)
+internal sealed class MediaMonitor(bool probeAddress = false) : IDisposable
 {
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private readonly BrowserWebsiteDetector _websites = new(probeAddress);
     private readonly ConcurrentDictionary<string, string> _thumbnails = new();
+    public void Dispose() => _websites.Dispose();
 
     public async Task<IReadOnlyList<MediaSnapshot>> ReadAsync(CancellationToken cancellationToken, bool waitForBrowserAddress = false, bool readYouTubeAddress = true)
     {
@@ -61,8 +62,7 @@ internal sealed class MediaMonitor(bool probeAddress = false)
                 position = TimeSpan.FromSeconds(Math.Clamp(position.TotalSeconds, 0, duration.TotalSeconds));
             else position = TimeSpan.Zero;
             var appId = session.SourceAppUserModelId;
-            var source = SourceClassifier.Classify(appId);
-            if (source.Source == MediaSource.Browser) source = (source.Source, BrowserIdentity.ForSession(source.Name));
+            var source = BrowserIdentity.ResolveSession(appId, properties.Title);
             var media = MediaMetadata.Normalize(new(appId, source.Name, source.Source, properties.Title ?? "", properties.Artist ?? "",
                 properties.AlbumTitle ?? "", playing, session.Equals(current), position, duration, rate, now));
             _thumbnails.TryGetValue(media.TrackKey, out var picture);
