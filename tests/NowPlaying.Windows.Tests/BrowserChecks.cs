@@ -49,6 +49,23 @@ internal static class BrowserChecks
         stopping.Enrich([firefox]);
         stopping.DisposeAsync().GetAwaiter().GetResult();
         Check(cancelled, "Shutdown/update must wait for its browser lookup to stop");
+        var cacheFolder = Path.Combine(Path.GetTempPath(), "synko-browser-cache-" + Guid.NewGuid().ToString("N"));
+        var cachePath = Path.Combine(cacheFolder, "last-video.json");
+        try
+        {
+            var cache = new BrowserVideoCache(cachePath);
+            cache.Remember(firefox.TrackKey, "Au6KnAm-Njc");
+            Check(new BrowserVideoCache(cachePath).Find(firefox.TrackKey) == "Au6KnAm-Njc", "Restart must retain the known public URL of the same video");
+            var next = firefox with { Title = "A completely different video" };
+            Check(cache.Find(next.TrackKey) is null && cache.Find(helium.TrackKey) is null, "A cache entry must never attach the previous or another browser's video");
+            using (var restarted = new BrowserWebsiteDetector(windowReader: _ => [], cacheFile: cachePath))
+                Check(restarted.Enrich([firefox])[0] is { Website: MediaWebsite.YouTube, VideoId: "Au6KnAm-Njc" }, "An already known background video must recover even before a browser window exposes its URL");
+            cache.Remember(next.TrackKey, "aqz-KE-bpKQ");
+            Check(new BrowserVideoCache(cachePath).Find(firefox.TrackKey) is null && new BrowserVideoCache(cachePath).Find(next.TrackKey) == "aqz-KE-bpKQ", "Keep only the last known video per browser");
+            var json = File.ReadAllText(cachePath);
+            Check(!json.Contains(firefox.Title) && !json.Contains(next.Title) && !json.Contains(firefox.Artist), "The restore cache must not store readable media metadata");
+        }
+        finally { if (Directory.Exists(cacheFolder)) Directory.Delete(cacheFolder, recursive: true); }
         var previousFolder = SettingsStore.OverrideFolder;
         var diagnosticFolder = Path.Combine(Path.GetTempPath(), "synko-browser-diagnostic-" + Guid.NewGuid().ToString("N"));
         SettingsStore.OverrideFolder = diagnosticFolder;

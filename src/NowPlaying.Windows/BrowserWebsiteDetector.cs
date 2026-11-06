@@ -8,9 +8,10 @@ namespace NowPlaying.Windows;
 internal sealed class BrowserWebsiteDetector(bool probeAddress = false,
     Func<IReadOnlyList<MediaSnapshot>, List<(string Browser, string Title, IntPtr Handle)>>? windowReader = null,
     Func<IntPtr, string, CancellationToken, Task<BrowserAddressReader.Result>>? addressReader = null,
-    TimeProvider? timeProvider = null) : IDisposable, IAsyncDisposable
+    TimeProvider? timeProvider = null, string? cacheFile = null) : IDisposable, IAsyncDisposable
 {
     private readonly CancellationTokenSource _stop = new();
+    private readonly BrowserVideoCache? _videoCache = cacheFile is null ? null : new(cacheFile, timeProvider);
     private bool _disposed;
     private readonly Dictionary<string, (MediaWebsite Website, string? VideoId, DateTimeOffset Expires)> _known = new(StringComparer.Ordinal);
     private Task<(string TrackKey, BrowserAddressReader.Result Match)>? _addressLookup;
@@ -37,8 +38,10 @@ internal sealed class BrowserWebsiteDetector(bool probeAddress = false,
                 var result = _addressLookup.Result;
                 if (result.Match.Website != MediaWebsite.Unknown)
                 {
+                    if (readAddress && result.Match.VideoId is { } id) _videoCache?.Remember(result.TrackKey, id);
                     if (_known.Count >= 256 && !_known.ContainsKey(result.TrackKey)) _known.Remove(_known.MinBy(item => item.Value.Expires).Key);
-                    _known[result.TrackKey] = (result.Match.Website, result.Match.VideoId, (timeProvider ?? TimeProvider.System).GetUtcNow().AddHours(1));
+                    var resolvedId = result.Match.VideoId ?? (_known.TryGetValue(result.TrackKey, out var previous) ? previous.VideoId : null);
+                    _known[result.TrackKey] = (result.Match.Website, resolvedId, (timeProvider ?? TimeProvider.System).GetUtcNow().AddHours(1));
                 }
             }
             else _ = _addressLookup.Exception; // Observe an optional accessibility provider failure.
@@ -57,6 +60,8 @@ internal sealed class BrowserWebsiteDetector(bool probeAddress = false,
                 && BrowserSiteClassifier.FromWindowTitle(media.Title, w.Title) == MediaWebsite.YouTube);
             var website = matchedWindow.Handle != IntPtr.Zero ? MediaWebsite.YouTube : MediaWebsite.Unknown;
             var videoId = _known.TryGetValue(media.TrackKey, out var cached) ? cached.VideoId : null;
+            if (readAddress && videoId is null && _videoCache?.Find(media.TrackKey) is { } saved)
+            { videoId = saved; website = MediaWebsite.YouTube; }
             if (website != MediaWebsite.Unknown)
             {
                 if (_known.Count >= 256 && !_known.ContainsKey(media.TrackKey)) _known.Remove(_known.MinBy(item => item.Value.Expires).Key);
@@ -68,7 +73,9 @@ internal sealed class BrowserWebsiteDetector(bool probeAddress = false,
                 _known[media.TrackKey] = (known.Website, known.VideoId, now.AddHours(1));
             }
             var browserWindow = matchedWindow.Handle != IntPtr.Zero ? matchedWindow.Handle : windows.FirstOrDefault(w => w.Browser == media.SourceName).Handle;
-            if (readAddress && browserWindow != IntPtr.Zero && (website == MediaWebsite.Unknown || videoId is null)) pending.Add((media, browserWindow));
+            var refresh = videoId is not null && matchedWindow.Handle != IntPtr.Zero
+                && (!_attempts.TryGetValue(media.TrackKey, out var checkedAt) || now - checkedAt >= TimeSpan.FromSeconds(30));
+            if (readAddress && browserWindow != IntPtr.Zero && (website == MediaWebsite.Unknown || videoId is null || refresh)) pending.Add((media, browserWindow));
             return media with { Website = website, VideoId = readAddress ? videoId : null };
         }).ToArray();
         if (_addressLookup is null)

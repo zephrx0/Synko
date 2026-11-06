@@ -8,7 +8,7 @@ namespace NowPlaying.Windows;
 internal sealed class MediaMonitor(bool probeAddress = false) : IDisposable, IAsyncDisposable
 {
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
-    private readonly BrowserWebsiteDetector _websites = new(probeAddress);
+    private readonly BrowserWebsiteDetector _websites = new(probeAddress, cacheFile: Path.Combine(SettingsStore.Folder, "browser-video.json"));
     private readonly ConcurrentDictionary<string, string> _thumbnails = new();
     public void Dispose() => _websites.Dispose();
     public ValueTask DisposeAsync() => _websites.DisposeAsync();
